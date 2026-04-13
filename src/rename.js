@@ -1,7 +1,5 @@
-// rename.js - rename sessions by id or name
-
 /**
- * Rename a session by its id
+ * renameSession - rename a session by its id
  * @param {object[]} sessions
  * @param {string} id
  * @param {string} newName
@@ -9,39 +7,37 @@
  */
 function renameSession(sessions, id, newName) {
   if (!newName || typeof newName !== 'string' || newName.trim() === '') {
-    throw new Error('New name must be a non-empty string');
+    throw new Error('newName must be a non-empty string');
   }
-  const idx = sessions.findIndex(s => s.id === id);
-  if (idx === -1) {
-    throw new Error(`Session with id "${id}" not found`);
-  }
-  const updated = sessions.map((s, i) =>
-    i === idx ? { ...s, name: newName.trim() } : s
+  return sessions.map(session =>
+    session.id === id
+      ? { ...session, name: newName.trim() }
+      : session
   );
-  return updated;
 }
 
 /**
- * Rename a session by its current name (renames first match)
+ * renameSessionByName - rename the first session matching oldName
  * @param {object[]} sessions
- * @param {string} currentName
+ * @param {string} oldName
  * @param {string} newName
  * @returns {object[]}
  */
-function renameSessionByName(sessions, currentName, newName) {
+function renameSessionByName(sessions, oldName, newName) {
+  if (!oldName || typeof oldName !== 'string' || oldName.trim() === '') {
+    throw new Error('oldName must be a non-empty string');
+  }
   if (!newName || typeof newName !== 'string' || newName.trim() === '') {
-    throw new Error('New name must be a non-empty string');
+    throw new Error('newName must be a non-empty string');
   }
-  const idx = sessions.findIndex(
-    s => s.name && s.name.toLowerCase() === currentName.toLowerCase()
-  );
-  if (idx === -1) {
-    throw new Error(`Session with name "${currentName}" not found`);
-  }
-  const updated = sessions.map((s, i) =>
-    i === idx ? { ...s, name: newName.trim() } : s
-  );
-  return updated;
+  let renamed = false;
+  return sessions.map(session => {
+    if (!renamed && session.name === oldName.trim()) {
+      renamed = true;
+      return { ...session, name: newName.trim() };
+    }
+    return session;
+  });
 }
 
 module.exports = { renameSession, renameSessionByName };

@@ -1,55 +1,41 @@
-// renameCmd.js - CLI command handler for renaming sessions
-
-const { loadSessions, saveSessions } = require('../sessionStore');
 const { renameSession, renameSessionByName } = require('../rename');
+const sessionStore = require('../sessionStore');
 
 /**
- * Handle the rename command
- * @param {object} argv - parsed CLI args
- *   --id or --name to identify the session
- *   --to for the new name
- *   --file optional path to sessions file
+ * handleRename - renames a session by id or by name
+ * @param {object} options
+ * @param {string} options.id - session id (or old name if byName is true)
+ * @param {string} options.name - new name for the session
+ * @param {boolean} [options.byName] - if true, match by session name instead of id
  */
-async function handleRename(argv) {
-  const { id, name, to: newName, file } = argv;
+function handleRename(options) {
+  const { id, name: newName, byName = false } = options;
 
-  if (!newName || newName.trim() === '') {
-    console.error('Error: --to <new name> is required');
-    process.exit(1);
+  if (!newName || typeof newName !== 'string' || newName.trim() === '') {
+    console.error('Error: new name must be a non-empty string.');
+    return;
   }
 
-  if (!id && !name) {
-    console.error('Error: provide --id or --name to identify the session');
-    process.exit(1);
-  }
+  const sessions = sessionStore.loadSessions();
 
-  let sessions;
   try {
-    sessions = await loadSessions(file);
-  } catch (err) {
-    console.error(`Error loading sessions: ${err.message}`);
-    process.exit(1);
-  }
-
-  let updated;
-  try {
-    if (id) {
-      updated = renameSession(sessions, id, newName);
+    let updated;
+    if (byName) {
+      updated = renameSessionByName(sessions, id, newName.trim());
     } else {
-      updated = renameSessionByName(sessions, name, newName);
+      updated = renameSession(sessions, id, newName.trim());
     }
+
+    const wasChanged = JSON.stringify(updated) !== JSON.stringify(sessions);
+    if (!wasChanged) {
+      console.error(`Error: no session found with ${byName ? 'name' : 'id'} "${id}".`);
+      return;
+    }
+
+    sessionStore.saveSessions(updated);
+    console.log(`Session renamed to "${newName.trim()}" successfully.`);
   } catch (err) {
     console.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
-
-  try {
-    await saveSessions(updated, file);
-    const identifier = id ? `id "${id}"` : `name "${name}"`;
-    console.log(`Session with ${identifier} renamed to "${newName.trim()}".`);
-  } catch (err) {
-    console.error(`Error saving sessions: ${err.message}`);
-    process.exit(1);
   }
 }
 
