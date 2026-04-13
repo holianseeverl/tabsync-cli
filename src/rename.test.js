@@ -1,76 +1,78 @@
 const { renameSession, renameSessionByName } = require('./rename');
 
-const mockSessions = () => [
-  { id: 'abc123', name: 'Work Tabs', tabs: [], createdAt: '2024-01-01T00:00:00.000Z' },
-  { id: 'def456', name: 'Personal', tabs: [], createdAt: '2024-01-02T00:00:00.000Z' },
-  { id: 'ghi789', name: 'Research', tabs: [], createdAt: '2024-01-03T00:00:00.000Z' },
+const makeSessions = () => [
+  { id: 'abc1', name: 'Work Tabs', tabs: [], createdAt: '2024-01-01' },
+  { id: 'abc2', name: 'Research', tabs: [], createdAt: '2024-01-02' },
+  { id: 'abc3', name: 'Shopping', tabs: [], createdAt: '2024-01-03' },
 ];
 
 describe('renameSession', () => {
-  test('renames a session by id', () => {
-    const { sessions, renamed } = renameSession(mockSessions(), 'abc123', 'Office Tabs');
-    expect(renamed).toBe(true);
-    expect(sessions[0].name).toBe('Office Tabs');
+  test('renames session by id', () => {
+    const sessions = makeSessions();
+    const result = renameSession(sessions, 'abc1', 'Work Stuff');
+    expect(result[0].name).toBe('Work Stuff');
   });
 
-  test('sets updatedAt on renamed session', () => {
-    const { sessions } = renameSession(mockSessions(), 'abc123', 'Office Tabs');
-    expect(sessions[0].updatedAt).toBeDefined();
+  test('does not mutate original array', () => {
+    const sessions = makeSessions();
+    renameSession(sessions, 'abc1', 'New Name');
+    expect(sessions[0].name).toBe('Work Tabs');
   });
 
-  test('does not modify other sessions', () => {
-    const { sessions } = renameSession(mockSessions(), 'abc123', 'Office Tabs');
-    expect(sessions[1].name).toBe('Personal');
-    expect(sessions[2].name).toBe('Research');
+  test('leaves other sessions unchanged', () => {
+    const sessions = makeSessions();
+    const result = renameSession(sessions, 'abc1', 'New Name');
+    expect(result[1].name).toBe('Research');
+    expect(result[2].name).toBe('Shopping');
   });
 
-  test('returns renamed=false when id not found', () => {
-    const { sessions, renamed } = renameSession(mockSessions(), 'notreal', 'Whatever');
-    expect(renamed).toBe(false);
-    expect(sessions).toHaveLength(3);
+  test('throws if id not found', () => {
+    const sessions = makeSessions();
+    expect(() => renameSession(sessions, 'notreal', 'X')).toThrow('not found');
   });
 
   test('throws if new name is empty', () => {
-    expect(() => renameSession(mockSessions(), 'abc123', '')).toThrow();
-  });
-
-  test('throws if new name is whitespace only', () => {
-    expect(() => renameSession(mockSessions(), 'abc123', '   ')).toThrow();
+    const sessions = makeSessions();
+    expect(() => renameSession(sessions, 'abc1', '')).toThrow();
   });
 
   test('trims whitespace from new name', () => {
-    const { sessions } = renameSession(mockSessions(), 'abc123', '  Trimmed  ');
-    expect(sessions[0].name).toBe('Trimmed');
+    const sessions = makeSessions();
+    const result = renameSession(sessions, 'abc1', '  Trimmed  ');
+    expect(result[0].name).toBe('Trimmed');
   });
 });
 
 describe('renameSessionByName', () => {
-  test('renames first matching session by name', () => {
-    const { sessions, renamed } = renameSessionByName(mockSessions(), 'Personal', 'Home Tabs');
-    expect(renamed).toBe(true);
-    expect(sessions[1].name).toBe('Home Tabs');
+  test('renames session by current name', () => {
+    const sessions = makeSessions();
+    const result = renameSessionByName(sessions, 'Research', 'Deep Research');
+    expect(result[1].name).toBe('Deep Research');
   });
 
-  test('only renames first match', () => {
+  test('is case-insensitive for current name', () => {
+    const sessions = makeSessions();
+    const result = renameSessionByName(sessions, 'work tabs', 'Office');
+    expect(result[0].name).toBe('Office');
+  });
+
+  test('throws if name not found', () => {
+    const sessions = makeSessions();
+    expect(() => renameSessionByName(sessions, 'Nope', 'X')).toThrow('not found');
+  });
+
+  test('throws if new name is empty string', () => {
+    const sessions = makeSessions();
+    expect(() => renameSessionByName(sessions, 'Research', '   ')).toThrow();
+  });
+
+  test('renames only first match when duplicates exist', () => {
     const sessions = [
-      ...mockSessions(),
-      { id: 'dup001', name: 'Personal', tabs: [], createdAt: '2024-01-04T00:00:00.000Z' },
+      { id: 'x1', name: 'Dupe', tabs: [] },
+      { id: 'x2', name: 'Dupe', tabs: [] },
     ];
-    const { sessions: updated } = renameSessionByName(sessions, 'Personal', 'Home Tabs');
-    expect(updated.filter((s) => s.name === 'Personal')).toHaveLength(1);
-    expect(updated.filter((s) => s.name === 'Home Tabs')).toHaveLength(1);
-  });
-
-  test('returns renamed=false when name not found', () => {
-    const { renamed } = renameSessionByName(mockSessions(), 'Nonexistent', 'New Name');
-    expect(renamed).toBe(false);
-  });
-
-  test('throws if current name is empty', () => {
-    expect(() => renameSessionByName(mockSessions(), '', 'New Name')).toThrow();
-  });
-
-  test('throws if new name is empty', () => {
-    expect(() => renameSessionByName(mockSessions(), 'Personal', '')).toThrow();
+    const result = renameSessionByName(sessions, 'Dupe', 'First');
+    expect(result[0].name).toBe('First');
+    expect(result[1].name).toBe('Dupe');
   });
 });

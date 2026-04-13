@@ -1,56 +1,47 @@
-/**
- * rename.js — utilities for renaming sessions
- */
+// rename.js - rename sessions by id or name
 
 /**
- * Rename a session by its ID.
- * @param {Array} sessions - array of session objects
- * @param {string} sessionId - the id of the session to rename
- * @param {string} newName - the new name to assign
- * @returns {{ sessions: Array, renamed: boolean }}
+ * Rename a session by its id
+ * @param {object[]} sessions
+ * @param {string} id
+ * @param {string} newName
+ * @returns {object[]}
  */
-function renameSession(sessions, sessionId, newName) {
+function renameSession(sessions, id, newName) {
   if (!newName || typeof newName !== 'string' || newName.trim() === '') {
     throw new Error('New name must be a non-empty string');
   }
-
-  let renamed = false;
-  const updated = sessions.map((session) => {
-    if (session.id === sessionId) {
-      renamed = true;
-      return { ...session, name: newName.trim(), updatedAt: new Date().toISOString() };
-    }
-    return session;
-  });
-
-  return { sessions: updated, renamed };
+  const idx = sessions.findIndex(s => s.id === id);
+  if (idx === -1) {
+    throw new Error(`Session with id "${id}" not found`);
+  }
+  const updated = sessions.map((s, i) =>
+    i === idx ? { ...s, name: newName.trim() } : s
+  );
+  return updated;
 }
 
 /**
- * Rename a session by its current name (first match).
- * @param {Array} sessions
+ * Rename a session by its current name (renames first match)
+ * @param {object[]} sessions
  * @param {string} currentName
  * @param {string} newName
- * @returns {{ sessions: Array, renamed: boolean }}
+ * @returns {object[]}
  */
 function renameSessionByName(sessions, currentName, newName) {
-  if (!currentName || typeof currentName !== 'string') {
-    throw new Error('Current name must be a non-empty string');
-  }
   if (!newName || typeof newName !== 'string' || newName.trim() === '') {
     throw new Error('New name must be a non-empty string');
   }
-
-  let renamed = false;
-  const updated = sessions.map((session) => {
-    if (!renamed && session.name === currentName.trim()) {
-      renamed = true;
-      return { ...session, name: newName.trim(), updatedAt: new Date().toISOString() };
-    }
-    return session;
-  });
-
-  return { sessions: updated, renamed };
+  const idx = sessions.findIndex(
+    s => s.name && s.name.toLowerCase() === currentName.toLowerCase()
+  );
+  if (idx === -1) {
+    throw new Error(`Session with name "${currentName}" not found`);
+  }
+  const updated = sessions.map((s, i) =>
+    i === idx ? { ...s, name: newName.trim() } : s
+  );
+  return updated;
 }
 
 module.exports = { renameSession, renameSessionByName };
