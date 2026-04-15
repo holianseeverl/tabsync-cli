@@ -1,62 +1,35 @@
 const { v4: uuidv4 } = require('uuid');
 
-/**
- * Archive (soft-delete) a session by marking it with an archivedAt timestamp.
- * Returns a new sessions array with the session archived.
- */
 function archiveSession(sessions, sessionId) {
-  const index = sessions.findIndex(s => s.id === sessionId);
-  if (index === -1) {
-    throw new Error(`Session with id "${sessionId}" not found.`);
-  }
+  const idx = sessions.findIndex(s => s.id === sessionId);
+  if (idx === -1) throw new Error(`Session not found: ${sessionId}`);
   const updated = sessions.map(s =>
-    s.id === sessionId ? { ...s, archivedAt: new Date().toISOString() } : s
+    s.id === sessionId ? { ...s, archived: true, archivedAt: new Date().toISOString() } : s
   );
   return updated;
 }
 
-/**
- * Unarchive a session by removing its archivedAt timestamp.
- */
 function unarchiveSession(sessions, sessionId) {
-  const index = sessions.findIndex(s => s.id === sessionId);
-  if (index === -1) {
-    throw new Error(`Session with id "${sessionId}" not found.`);
-  }
+  const idx = sessions.findIndex(s => s.id === sessionId);
+  if (idx === -1) throw new Error(`Session not found: ${sessionId}`);
   const updated = sessions.map(s => {
     if (s.id !== sessionId) return s;
-    const copy = { ...s };
-    delete copy.archivedAt;
-    return copy;
+    const { archived, archivedAt, ...rest } = s;
+    return rest;
   });
   return updated;
 }
 
-/**
- * Return only archived sessions.
- */
 function listArchived(sessions) {
-  return sessions.filter(s => Boolean(s.archivedAt));
+  return sessions.filter(s => s.archived === true);
 }
 
-/**
- * Return only active (non-archived) sessions.
- */
 function listActive(sessions) {
-  return sessions.filter(s => !s.archivedAt);
+  return sessions.filter(s => !s.archived);
 }
 
-/**
- * Permanently remove all archived sessions from the list.
- */
 function purgeArchived(sessions) {
-  return sessions.filter(s => !s.archivedAt);
+  return sessions.filter(s => !s.archived);
 }
 
-module.exports = {
-  archiveSession,
-  unarchiveSession,
-  listArchived,
-  listActive,
-  purgeArchived,
-};
+module.exports = { archiveSession, unarchiveSession, listArchived, listActive, purgeArchived };
