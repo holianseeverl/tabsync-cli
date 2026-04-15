@@ -13,10 +13,17 @@ async function handleTagAdd(sessionId, tag, options = {}) {
     process.exit(1);
   }
 
+  const normalizedTag = tag.trim().toLowerCase();
+
+  if (sessions[index].tags && sessions[index].tags.includes(normalizedTag)) {
+    console.log(`Tag "${normalizedTag}" is already present on session "${sessions[index].name}".`);
+    return;
+  }
+
   sessions[index] = addTag(sessions[index], tag);
   await saveSessions(sessions, options.file);
 
-  console.log(`Tag "${tag.trim().toLowerCase()}" added to session "${sessions[index].name}".`);
+  console.log(`Tag "${normalizedTag}" added to session "${sessions[index].name}".`);
 }
 
 /**
@@ -31,10 +38,17 @@ async function handleTagRemove(sessionId, tag, options = {}) {
     process.exit(1);
   }
 
+  const normalizedTag = tag.trim().toLowerCase();
+
+  if (!sessions[index].tags || !sessions[index].tags.includes(normalizedTag)) {
+    console.log(`Tag "${normalizedTag}" not found on session "${sessions[index].name}".`);
+    return;
+  }
+
   sessions[index] = removeTag(sessions[index], tag);
   await saveSessions(sessions, options.file);
 
-  console.log(`Tag "${tag.trim().toLowerCase()}" removed from session "${sessions[index].name}".`);
+  console.log(`Tag "${normalizedTag}" removed from session "${sessions[index].name}".`);
 }
 
 /**
