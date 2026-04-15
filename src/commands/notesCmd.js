@@ -20,6 +20,10 @@ async function handleRemoveNote(name, options = {}) {
     console.error(`Session "${name}" not found.`);
     process.exit(1);
   }
+  if (!getNote(sessions[idx])) {
+    console.log(`No note to remove for session "${name}".`);
+    return;
+  }
   const updated = [...sessions];
   updated[idx] = removeNote(sessions[idx]);
   await saveSessions(updated, options.file);
