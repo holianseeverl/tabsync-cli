@@ -38,6 +38,11 @@ describe('setNote', () => {
     const session = makeSession('1', 'Work');
     expect(() => setNote(session, 123)).toThrow();
   });
+
+  it('throws if note is null', () => {
+    const session = makeSession('1', 'Work');
+    expect(() => setNote(session, null)).toThrow();
+  });
 });
 
 describe('removeNote', () => {
@@ -51,6 +56,12 @@ describe('removeNote', () => {
     const session = makeSession('1', 'Work');
     const result = removeNote(session);
     expect(result.note).toBeNull();
+  });
+
+  it('does not mutate the original session', () => {
+    const session = makeSession('1', 'Work', 'some note');
+    removeNote(session);
+    expect(session.note).toBe('some note');
   });
 });
 
@@ -115,9 +126,18 @@ describe('setNoteByName', () => {
     expect(other.note).toBeNull();
   });
 
-  it('returns sessions unchanged if name not found', () => {
-    const sessions = [makeSession('1', 'Work')];
-    const result = setNoteByName(sessions, 'Nonexistent', 'note');
-    expect(result[0].note).toBeNull();
+  it('returns the same sessions array length', () => {
+    const sessions = [
+      makeSession('1', 'Work'),
+      makeSession('2', 'Home')
+    ];
+    const result = setNoteByName(sessions, 'Work', 'work related');
+    expect(result).toHaveLength(2);
+  });
+
+  it('returns unchanged sessions if name not found', () => {
+    const sessions = [makeSession('1', 'Work', 'existing')];
+    const result = setNoteByName(sessions, 'Nonexistent', 'new note');
+    expect(result[0].note).toBe('existing');
   });
 });
