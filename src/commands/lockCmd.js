@@ -1,47 +1,38 @@
-// lockCmd.js — CLI handlers for lock/unlock session commands
-
-const { loadSessions, saveSessions } = require('../sessionStore');
 const { lockSession, unlockSession, listLocked, lockSessionByName } = require('../lock');
+const { loadSessions, saveSessions } = require('../sessionStore');
 
-async function handleLock(id, { byName } = {}) {
-  let sessions = await loadSessions();
-  try {
-    if (byName) {
-      sessions = lockSessionByName(sessions, id);
-      console.log(`Session "${id}" locked.`);
-    } else {
-      sessions = lockSession(sessions, id);
-      console.log(`Session ${id} locked.`);
-    }
-    await saveSessions(sessions);
-  } catch (err) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
-}
-
-async function handleUnlock(id) {
-  let sessions = await loadSessions();
-  try {
-    sessions = unlockSession(sessions, id);
-    await saveSessions(sessions);
-    console.log(`Session ${id} unlocked.`);
-  } catch (err) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
-}
-
-async function handleListLocked() {
-  const sessions = await loadSessions();
-  const locked = listLocked(sessions);
-  if (locked.length === 0) {
-    console.log('No locked sessions.');
+function handleLock(name) {
+  const sessions = loadSessions();
+  const updated = lockSessionByName(sessions, name);
+  if (!updated) {
+    console.error(`Session "${name}" not found.`);
     return;
   }
+  saveSessions(updated);
+  console.log(`Session "${name}" has been locked.`);
+}
+
+function handleUnlock(id) {
+  const sessions = loadSessions();
+  const updated = unlockSession(sessions, id);
+  if (!updated) {
+    console.error(`Session with id "${id}" not found.`);
+    return;
+  }
+  saveSessions(updated);
+  console.log(`Session "${id}" has been unlocked.`);
+}
+
+function handleListLocked() {
+  const sessions = loadSessions();
+  const locked = listLocked(sessions);
+  if (locked.length === 0) {
+    console.log('No locked sessions found.');
+    return;
+  }
+  console.log(`Locked sessions (${locked.length}):`);
   locked.forEach(s => {
-    const tabCount = Array.isArray(s.tabs) ? s.tabs.length : 0;
-    console.log(`[LOCKED] ${s.id} — ${s.name} (${tabCount} tab${tabCount !== 1 ? 's' : ''})`);
+    console.log(`  [${s.id}] ${s.name} — ${s.tabs.length} tab(s)`);
   });
 }
 
