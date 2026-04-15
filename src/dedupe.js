@@ -49,6 +49,16 @@ function dedupeExact(sessions) {
 }
 
 /**
+ * Build a fingerprint key for a session based on its name and sorted tab URLs.
+ * Used internally to compare sessions for equality.
+ * @param {Object} session
+ * @returns {string}
+ */
+function sessionKey(session) {
+  return session.name + '|' + session.tabs.map((t) => t.url).sort().join(',');
+}
+
+/**
  * Run full deduplication: exact session duplicates, then tabs within each session
  * @param {Array} sessions
  * @returns {Array}
@@ -58,4 +68,4 @@ function dedupe(sessions) {
   return uniqueSessions.map(dedupeTabsInSession);
 }
 
-module.exports = { dedupeTabsInSession, dedupeSessionsByName, dedupeExact, dedupe };
+module.exports = { dedupeTabsInSession, dedupeSessionsByName, dedupeExact, dedupe, sessionKey };
