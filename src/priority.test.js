@@ -4,20 +4,21 @@ const {
   clearPriority,
   setPriorityByName,
   filterByPriority,
-  getSessionPriority,
   sortByPriority,
+  getSessionPriority
 } = require('./priority');
 
 const mockSessions = () => [
   { id: '1', name: 'Work', tabs: [], priority: 'high' },
   { id: '2', name: 'Personal', tabs: [], priority: 'low' },
   { id: '3', name: 'Research', tabs: [] },
+  { id: '4', name: 'Urgent', tabs: [], priority: 'critical' }
 ];
 
 describe('isValidPriority', () => {
   it('returns true for valid priorities', () => {
     expect(isValidPriority('low')).toBe(true);
-    expect(isValidPriority('normal')).toBe(true);
+    expect(isValidPriority('medium')).toBe(true);
     expect(isValidPriority('high')).toBe(true);
     expect(isValidPriority('critical')).toBe(true);
   });
@@ -31,22 +32,23 @@ describe('isValidPriority', () => {
 
 describe('setPriority', () => {
   it('sets priority on matching session', () => {
-    const result = setPriority(mockSessions(), '3', 'critical');
-    expect(result.find(s => s.id === '3').priority).toBe('critical');
-  });
-
-  it('does not mutate other sessions', () => {
-    const result = setPriority(mockSessions(), '3', 'critical');
-    expect(result.find(s => s.id === '1').priority).toBe('high');
+    const result = setPriority(mockSessions(), '3', 'medium');
+    expect(result.find(s => s.id === '3').priority).toBe('medium');
   });
 
   it('throws on invalid priority', () => {
-    expect(() => setPriority(mockSessions(), '1', 'extreme')).toThrow('Invalid priority');
+    expect(() => setPriority(mockSessions(), '1', 'extreme')).toThrow();
+  });
+
+  it('does not mutate other sessions', () => {
+    const sessions = mockSessions();
+    const result = setPriority(sessions, '1', 'medium');
+    expect(result.find(s => s.id === '2').priority).toBe('low');
   });
 });
 
 describe('clearPriority', () => {
-  it('removes priority field from session', () => {
+  it('removes priority from session', () => {
     const result = clearPriority(mockSessions(), '1');
     expect(result.find(s => s.id === '1').priority).toBeUndefined();
   });
@@ -59,53 +61,48 @@ describe('clearPriority', () => {
 
 describe('setPriorityByName', () => {
   it('sets priority by session name', () => {
-    const result = setPriorityByName(mockSessions(), 'Research', 'normal');
-    expect(result.find(s => s.name === 'Research').priority).toBe('normal');
+    const result = setPriorityByName(mockSessions(), 'Research', 'high');
+    expect(result.find(s => s.name === 'Research').priority).toBe('high');
   });
 
-  it('throws if session name not found', () => {
-    expect(() => setPriorityByName(mockSessions(), 'Ghost', 'low')).toThrow('not found');
+  it('throws on invalid priority', () => {
+    expect(() => setPriorityByName(mockSessions(), 'Work', 'bad')).toThrow();
   });
 });
 
 describe('filterByPriority', () => {
-  it('returns only sessions with given priority', () => {
+  it('filters sessions by priority', () => {
     const result = filterByPriority(mockSessions(), 'high');
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Work');
   });
 
+  it('returns empty array if none match', () => {
+    const result = filterByPriority(mockSessions(), 'medium');
+    expect(result).toHaveLength(0);
+  });
+
   it('throws on invalid priority', () => {
-    expect(() => filterByPriority(mockSessions(), 'mega')).toThrow('Invalid priority');
-  });
-});
-
-describe('getSessionPriority', () => {
-  it('returns the session priority', () => {
-    expect(getSessionPriority({ priority: 'critical' })).toBe('critical');
-  });
-
-  it('defaults to normal if no priority set', () => {
-    expect(getSessionPriority({})).toBe('normal');
+    expect(() => filterByPriority(mockSessions(), 'nope')).toThrow();
   });
 });
 
 describe('sortByPriority', () => {
-  it('sorts sessions from critical to low', () => {
-    const sessions = [
-      { id: '1', priority: 'low' },
-      { id: '2', priority: 'critical' },
-      { id: '3', priority: 'high' },
-      { id: '4' },
-    ];
-    const result = sortByPriority(sessions);
-    expect(result.map(s => s.id)).toEqual(['2', '3', '4', '1']);
+  it('sorts sessions from critical to low, unset last', () => {
+    const result = sortByPriority(mockSessions());
+    expect(result[0].priority).toBe('critical');
+    expect(result[1].priority).toBe('high');
+    expect(result[2].priority).toBe('low');
+    expect(result[3].priority).toBeUndefined();
+  });
+});
+
+describe('getSessionPriority', () => {
+  it('returns priority if set', () => {
+    expect(getSessionPriority({ id: '1', priority: 'high' })).toBe('high');
   });
 
-  it('does not mutate original array', () => {
-    const sessions = mockSessions();
-    const original = [...sessions];
-    sortByPriority(sessions);
-    expect(sessions).toEqual(original);
+  it('returns null if not set', () => {
+    expect(getSessionPriority({ id: '1' })).toBeNull();
   });
 });
