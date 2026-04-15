@@ -4,6 +4,18 @@ const { sort } = require('../sort');
 const VALID_SORT_FIELDS = ['date', 'name', 'tabs'];
 const VALID_ORDERS = ['asc', 'desc'];
 
+/**
+ * Formats a single session entry for display.
+ * @param {object} session - The session object.
+ * @param {number} index - The 1-based display index.
+ * @returns {string} Formatted string for console output.
+ */
+function formatSessionLine(session, index) {
+  const tabCount = session.tabs?.length || 0;
+  const date = session.createdAt ?? 'unknown date';
+  return `  ${index}. ${session.name} — ${tabCount} tab(s) — ${date}`;
+}
+
 async function handleSort(options = {}) {
   const { by = 'date', order, save = false } = options;
 
@@ -28,8 +40,7 @@ async function handleSort(options = {}) {
 
   console.log(`Sorted ${sorted.length} session(s) by ${by}${order ? ` (${order})` : ''}:\n`);
   sorted.forEach((s, i) => {
-    const tabCount = s.tabs?.length || 0;
-    console.log(`  ${i + 1}. ${s.name} — ${tabCount} tab(s) — ${s.createdAt}`);
+    console.log(formatSessionLine(s, i + 1));
   });
 
   if (save) {
