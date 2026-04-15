@@ -28,6 +28,10 @@ describe('createTemplate', () => {
   it('throws if session is invalid', () => {
     expect(() => createTemplate('t', { name: 'bad' })).toThrow('Invalid session');
   });
+
+  it('throws if session has no tabs', () => {
+    expect(() => createTemplate('t', { ...mockSession, tabs: [] })).toThrow('Invalid session');
+  });
 });
 
 describe('applyTemplate', () => {
@@ -48,6 +52,10 @@ describe('applyTemplate', () => {
 
   it('throws on invalid template', () => {
     expect(() => applyTemplate(null)).toThrow('Invalid template');
+  });
+
+  it('throws on template with missing tabs', () => {
+    expect(() => applyTemplate({ name: 'broken' })).toThrow('Invalid template');
   });
 });
 
@@ -70,6 +78,12 @@ describe('removeTemplate', () => {
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('beta');
   });
+
+  it('returns unchanged list if name not found', () => {
+    const templates = [createTemplate('alpha', mockSession)];
+    const result = removeTemplate(templates, 'nonexistent');
+    expect(result).toHaveLength(1);
+  });
 });
 
 describe('listTemplates', () => {
@@ -77,5 +91,9 @@ describe('listTemplates', () => {
     const templates = [createTemplate('alpha', mockSession)];
     const list = listTemplates(templates);
     expect(list[0]).toEqual(expect.objectContaining({ name: 'alpha', tabCount: 2 }));
+  });
+
+  it('returns an empty array for no templates', () => {
+    expect(listTemplates([])).toEqual([]);
   });
 });
