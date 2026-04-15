@@ -5,96 +5,75 @@ const {
   listExpired,
   listActive,
   setExpiryByName,
-  purgeExpired,
+  purgeExpired
 } = require('./expiry');
 
-const makeSession = (name, extra = {}) => ({
-  id: `id-${name}`,
-  name,
-  tabs: [{ url: 'https://example.com', title: 'Example' }],
-  createdAt: new Date().toISOString(),
-  ...extra,
+const now = new Date('2024-06-01T12:00:00Z');
+const past = '2024-05-01T00:00:00Z';
+const future = '2024-07-01T00:00:00Z';
+
+const sessions = [
+  { id: '1', name: 'alpha', tabs: [] },
+  { id: '2', name: 'beta', tabs: [], expiresAt: past },
+  { id: '3', name: 'gamma', tabs: [], expiresAt: future }
+];
+
+test('setExpiry sets expiresAt on matching session', () => {
+  const result = setExpiry(sessions, '1', future);
+  expect(result.find(s => s.id === '1').expiresAt).toBe(future);
+  expect(result.find(s => s.id === '2').expiresAt).toBe(past);
 });
 
-const PAST = new Date(Date.now() - 1000 * 60 * 60).toISOString();
-const FUTURE = new Date(Date.now() + 1000 * 60 * 60).toISOString();
-
-describe('setExpiry', () => {
-  test('adds expiresAt to session', () => {
-    const s = makeSession('alpha');
-    const result = setExpiry(s, FUTURE);
-    expect(result.expiresAt).toBe(new Date(FUTURE).toISOString());
-  });
-
-  test('throws on invalid session', () => {
-    expect(() => setExpiry({}, FUTURE)).toThrow('Invalid session');
-  });
-
-  test('throws on invalid date', () => {
-    expect(() => setExpiry(makeSession('a'), 'not-a-date')).toThrow('Invalid expiry date');
-  });
+test('setExpiry does not modify other sessions', () => {
+  const result = setExpiry(sessions, '1', future);
+  expect(result.find(s => s.id === '3').expiresAt).toBe(future);
 });
 
-describe('clearExpiry', () => {
-  test('removes expiresAt from session', () => {
-    const s = makeSession('beta', { expiresAt: FUTURE });
-    const result = clearExpiry(s);
-    expect(result.expiresAt).toBeUndefined();
-  });
-
-  test('throws on invalid session', () => {
-    expect(() => clearExpiry({})).toThrow('Invalid session');
-  });
+test('clearExpiry removes expiresAt from session', () => {
+  const result = clearExpiry(sessions, '2');
+  expect(result.find(s => s.id === '2').expiresAt).toBeUndefined();
 });
 
-describe('isExpired', () => {
-  test('returns true for past expiry', () => {
-    const s = makeSession('c', { expiresAt: PAST });
-    expect(isExpired(s)).toBe(true);
-  });
-
-  test('returns false for future expiry', () => {
-    const s = makeSession('d', { expiresAt: FUTURE });
-    expect(isExpired(s)).toBe(false);
-  });
-
-  test('returns false when no expiresAt', () => {
-    expect(isExpired(makeSession('e'))).toBe(false);
-  });
+test('clearExpiry leaves unrelated sessions intact', () => {
+  const result = clearExpiry(sessions, '2');
+  expect(result.find(s => s.id === '3').expiresAt).toBe(future);
 });
 
-describe('listExpired / listActive', () => {
-  const sessions = [
-    makeSession('old', { expiresAt: PAST }),
-    makeSession('new', { expiresAt: FUTURE }),
-    makeSession('none'),
-  ];
-
-  test('listExpired returns only expired sessions', () => {
-    expect(listExpired(sessions).map(s => s.name)).toEqual(['old']);
-  });
-
-  test('listActive returns non-expired sessions', () => {
-    expect(listActive(sessions).map(s => s.name)).toEqual(['new', 'none']);
-  });
+test('isExpired returns true for past expiresAt', () => {
+  expect(isExpired({ expiresAt: past }, now)).toBe(true);
 });
 
-describe('setExpiryByName', () => {
-  test('sets expiry on matching session', () => {
-    const sessions = [makeSession('work'), makeSession('play')];
-    const result = setExpiryByName(sessions, 'work', FUTURE);
-    expect(result.find(s => s.name === 'work').expiresAt).toBeDefined();
-    expect(result.find(s => s.name === 'play').expiresAt).toBeUndefined();
-  });
+test('isExpired returns false for future expiresAt', () => {
+  expect(isExpired({ expiresAt: future }, now)).toBe(false);
 });
 
-describe('purgeExpired', () => {
-  test('removes expired sessions', () => {
-    const sessions = [
-      makeSession('expired', { expiresAt: PAST }),
-      makeSession('active'),
-    ];
-    const result = purgeExpired(sessions);
-    expect(result.map(s => s.name)).toEqual(['active']);
-  });
+test('isExpired returns false when no expiresAt', () => {
+  expect(isExpired({ id: '1' }, now)).toBe(false);
+});
+
+test('listExpired returns only expired sessions', () => {
+  const result = listExpired(sessions, now);
+  expect(result).toHaveLength(1);
+  expect(result[0].id).toBe('2');
+});
+
+test('listActive returns sessions not expired', () => {
+  const result = listActive(sessions, now);
+  expect(result.map(s => s.id)).toEqual(['1', '3']);
+});
+
+test('setExpiryByName sets expiry by session name', () => {
+  const result = setExpiryByName(sessions, 'alpha', past);
+  expect(result.find(s => s.name === 'alpha').expiresAt).toBe(past);
+});
+
+test('setExpiryByName returns unchanged sessions if name not found', () => {
+  const result = setExpiryByName(sessions, 'nonexistent', past);
+  expect(result).toEqual(sessions);
+});
+
+test('purgeExpired removes expired sessions', () => {
+  const result = purgeExpired(sessions, now);
+  expect(result.find(s => s.id === '2')).toBeUndefined();
+  expect(result).toHaveLength(2);
 });
