@@ -4,80 +4,85 @@ const {
   hideSessionByName,
   listVisible,
   listHidden,
-  toggleVisibility,
+  isHidden
 } = require('./visibility');
 
-const makeSessions = () => [
-  { id: '1', name: 'Work', tabs: [], hidden: false },
-  { id: '2', name: 'Personal', tabs: [], hidden: false },
-  { id: '3', name: 'Research', tabs: [], hidden: true },
-];
+const makeSession = (id, name, tabs = []) => ({
+  id,
+  name,
+  tabs,
+  createdAt: new Date().toISOString()
+});
 
 describe('hideSession', () => {
-  it('marks a session as hidden by id', () => {
-    const result = hideSession(makeSessions(), '1');
-    expect(result.find(s => s.id === '1').hidden).toBe(true);
+  test('sets hidden flag to true', () => {
+    const s = makeSession('1', 'Work');
+    const result = hideSession(s);
+    expect(result.hidden).toBe(true);
   });
 
-  it('does not affect other sessions', () => {
-    const result = hideSession(makeSessions(), '1');
-    expect(result.find(s => s.id === '2').hidden).toBe(false);
-  });
-
-  it('returns same length array', () => {
-    const sessions = makeSessions();
-    expect(hideSession(sessions, '1')).toHaveLength(sessions.length);
+  test('does not mutate original', () => {
+    const s = makeSession('1', 'Work');
+    hideSession(s);
+    expect(s.hidden).toBeUndefined();
   });
 });
 
 describe('unhideSession', () => {
-  it('sets hidden to false for a session', () => {
-    const result = unhideSession(makeSessions(), '3');
-    expect(result.find(s => s.id === '3').hidden).toBe(false);
-  });
-
-  it('no-ops on already visible session', () => {
-    const result = unhideSession(makeSessions(), '2');
-    expect(result.find(s => s.id === '2').hidden).toBe(false);
+  test('removes hidden flag', () => {
+    const s = { ...makeSession('1', 'Work'), hidden: true };
+    const result = unhideSession(s);
+    expect(result.hidden).toBe(false);
   });
 });
 
 describe('hideSessionByName', () => {
-  it('hides the first session with matching name', () => {
-    const result = hideSessionByName(makeSessions(), 'Personal');
-    expect(result.find(s => s.name === 'Personal').hidden).toBe(true);
+  test('hides session matching name', () => {
+    const sessions = [
+      makeSession('1', 'Work'),
+      makeSession('2', 'Personal')
+    ];
+    const result = hideSessionByName(sessions, 'Work');
+    expect(result.find(s => s.id === '1').hidden).toBe(true);
+    expect(result.find(s => s.id === '2').hidden).toBeUndefined();
   });
 
-  it('does not change sessions with different names', () => {
-    const result = hideSessionByName(makeSessions(), 'Personal');
-    expect(result.find(s => s.name === 'Work').hidden).toBe(false);
+  test('returns unchanged list if name not found', () => {
+    const sessions = [makeSession('1', 'Work')];
+    const result = hideSessionByName(sessions, 'Ghost');
+    expect(result).toEqual(sessions);
   });
 });
 
 describe('listVisible', () => {
-  it('returns only non-hidden sessions', () => {
-    const result = listVisible(makeSessions());
-    expect(result).toHaveLength(2);
-    result.forEach(s => expect(s.hidden).not.toBe(true));
+  test('returns only non-hidden sessions', () => {
+    const sessions = [
+      makeSession('1', 'Work'),
+      { ...makeSession('2', 'Hidden'), hidden: true }
+    ];
+    expect(listVisible(sessions)).toHaveLength(1);
+    expect(listVisible(sessions)[0].id).toBe('1');
   });
 });
 
 describe('listHidden', () => {
-  it('returns only hidden sessions', () => {
-    const result = listHidden(makeSessions());
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('3');
+  test('returns only hidden sessions', () => {
+    const sessions = [
+      makeSession('1', 'Work'),
+      { ...makeSession('2', 'Hidden'), hidden: true }
+    ];
+    expect(listHidden(sessions)).toHaveLength(1);
+    expect(listHidden(sessions)[0].id).toBe('2');
   });
 });
 
-describe('toggleVisibility', () => {
-  it('hides a visible session', () => {
-    const result = toggleVisibility(makeSessions(), '1');
-    expect(result.find(s => s.id === '1').hidden).toBe(true);
+describe('isHidden', () => {
+  test('returns true for hidden session', () => {
+    expect(isHidden({ hidden: true })).toBe(true);
   });
 
-  it('unhides a hidden session', () => {
-    const result = toggleVisibility(makeSessions(), '3');
-    expect(result.find(s => s.id === '3').hidden).toBe(false);
+  test('returns false for visible session', () => {
+    expect(isHidden({ hidden: false })).toBe(false);
+    expect(isHidden({})).toBe(false);
   });
 });
