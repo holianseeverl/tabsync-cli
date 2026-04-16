@@ -30,6 +30,12 @@ function handleGroup(args, options = {}) {
   }
 
   const bucketSize = options.bucketSize ? parseInt(options.bucketSize, 10) : 5;
+
+  if (isNaN(bucketSize) || bucketSize <= 0) {
+    console.error('--bucket-size must be a positive integer.');
+    return;
+  }
+
   const grouped = group(sessions, by, { bucketSize });
   const keys = Object.keys(grouped).sort();
 
