@@ -1,64 +1,82 @@
-const { isValidCategory, setCategory, clearCategory, setCategoryByName, getCategory, filterByCategory, listCategories } = require('./category');
+const { isValidCategory, setCategory, clearCategory, setCategoryByName, getCategory, filterByCategory, sortByCategory } = require('./category');
 
-const makeSessions = () => [
-  { id: '1', name: 'Work Tabs', tabs: [] },
-  { id: '2', name: 'Fun Stuff', tabs: [], category: 'media' },
-  { id: '3', name: 'Research', tabs: [], category: 'research' },
-];
+function makeSession(id, name, extra = {}) {
+  return { id, name, tabs: [], createdAt: new Date().toISOString(), ...extra };
+}
 
-test('isValidCategory returns true for valid', () => {
-  expect(isValidCategory('work')).toBe(true);
-  expect(isValidCategory('dev')).toBe(true);
+describe('isValidCategory', () => {
+  test('accepts valid strings', () => {
+    expect(isValidCategory('work')).toBe(true);
+    expect(isValidCategory('personal')).toBe(true);
+  });
+  test('rejects empty or non-string', () => {
+    expect(isValidCategory('')).toBe(false);
+    expect(isValidCategory(null)).toBe(false);
+    expect(isValidCategory(42)).toBe(false);
+  });
 });
 
-test('isValidCategory returns false for invalid', () => {
-  expect(isValidCategory('unknown')).toBe(false);
-  expect(isValidCategory('')).toBe(false);
+describe('setCategory', () => {
+  test('sets category on session', () => {
+    const s = makeSession('1', 'Test');
+    const result = setCategory(s, 'work');
+    expect(result.category).toBe('work');
+  });
+  test('throws on invalid category', () => {
+    expect(() => setCategory(makeSession('1', 'T'), '')).toThrow();
+  });
 });
 
-test('setCategory assigns category by id', () => {
-  const sessions = makeSessions();
-  const result = setCategory(sessions, '1', 'work');
-  expect(result.find(s => s.id === '1').category).toBe('work');
+describe('clearCategory', () => {
+  test('removes category', () => {
+    const s = makeSession('1', 'Test', { category: 'work' });
+    const result = clearCategory(s);
+    expect(result.category).toBeUndefined();
+  });
 });
 
-test('setCategory throws on invalid category', () => {
-  expect(() => setCategory(makeSessions(), '1', 'bogus')).toThrow();
+describe('setCategoryByName', () => {
+  test('sets category on matching session', () => {
+    const sessions = [makeSession('1', 'Alpha'), makeSession('2', 'Beta')];
+    const result = setCategoryByName(sessions, 'Alpha', 'research');
+    expect(result.find(s => s.id === '1').category).toBe('research');
+    expect(result.find(s => s.id === '2').category).toBeUndefined();
+  });
+  test('returns unchanged if no match', () => {
+    const sessions = [makeSession('1', 'Alpha')];
+    const result = setCategoryByName(sessions, 'Nope', 'work');
+    expect(result).toEqual(sessions);
+  });
 });
 
-test('clearCategory removes category', () => {
-  const sessions = makeSessions();
-  const result = clearCategory(sessions, '2');
-  expect(result.find(s => s.id === '2').category).toBeUndefined();
+describe('getCategory', () => {
+  test('returns category', () => {
+    const s = makeSession('1', 'T', { category: 'personal' });
+    expect(getCategory(s)).toBe('personal');
+  });
+  test('returns null if unset', () => {
+    expect(getCategory(makeSession('1', 'T'))).toBeNull();
+  });
 });
 
-test('setCategoryByName sets category by name', () => {
-  const sessions = makeSessions();
-  const result = setCategoryByName(sessions, 'Work Tabs', 'dev');
-  expect(result.find(s => s.name === 'Work Tabs').category).toBe('dev');
+describe('filterByCategory', () => {
+  test('filters sessions by category', () => {
+    const sessions = [
+      makeSession('1', 'A', { category: 'work' }),
+      makeSession('2', 'B', { category: 'personal' }),
+      makeSession('3', 'C', { category: 'work' }),
+    ];
+    expect(filterByCategory(sessions, 'work')).toHaveLength(2);
+  });
 });
 
-test('getCategory returns category for session', () => {
-  expect(getCategory(makeSessions(), '2')).toBe('media');
-});
-
-test('getCategory returns null if no category', () => {
-  expect(getCategory(makeSessions(), '1')).toBeNull();
-});
-
-test('filterByCategory returns matching sessions', () => {
-  const result = filterByCategory(makeSessions(), 'research');
-  expect(result).toHaveLength(1);
-  expect(result[0].id).toBe('3');
-});
-
-test('filterByCategory throws on invalid category', () => {
-  expect(() => filterByCategory(makeSessions(), 'nope')).toThrow();
-});
-
-test('listCategories returns all valid categories', () => {
-  const cats = listCategories();
-  expect(cats).toContain('work');
-  expect(cats).toContain('other');
-  expect(cats.length).toBeGreaterThan(0);
+describe('sortByCategory', () => {
+  test('sorts alphabetically by category', () => {
+    const sessions = [
+      makeSession('1', 'A', { category: 'work' }),
+      makeSession('2', 'B', { category: 'personal' }),
+    ];
+    const sorted = sortByCategory(sessions);
+    expect(sorted[0].category).toBe('personal');
+  });
 });
