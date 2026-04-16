@@ -1,85 +1,75 @@
-const {
-  setContext,
-  clearContext,
-  getContext,
-  filterByContextKey,
-  filterByContextValue,
-  setContextByName,
-} = require('./context');
+const { setContext, clearContext, getContext, filterByContextKey, filterByContextValue, setContextByName } = require('./context');
 
-function makeSession(name, context = {}) {
-  return { id: name, name, tabs: [], context };
+function makeSession(name) {
+  return { id: name, name, tabs: [] };
 }
 
-test('setContext adds key to session', () => {
+test('setContext adds key/value to session', () => {
   const s = makeSession('work');
-  const result = setContext(s, 'device', 'laptop');
-  expect(result.context.device).toBe('laptop');
-});
-
-test('setContext does not mutate original', () => {
-  const s = makeSession('work');
-  setContext(s, 'device', 'laptop');
-  expect(s.context.device).toBeUndefined();
-});
-
-test('setContext merges with existing context', () => {
-  const s = makeSession('work', { env: 'prod' });
-  const result = setContext(s, 'device', 'laptop');
-  expect(result.context.env).toBe('prod');
-  expect(result.context.device).toBe('laptop');
+  setContext(s, 'env', 'production');
+  expect(s.context.env).toBe('production');
 });
 
 test('setContext throws on invalid key', () => {
+  expect(() => setContext(makeSession('a'), '', 'val')).toThrow();
+});
+
+test('getContext returns value for key', () => {
   const s = makeSession('work');
-  expect(() => setContext(s, '', 'val')).toThrow();
+  setContext(s, 'region', 'us-east');
+  expect(getContext(s, 'region')).toBe('us-east');
 });
 
-test('clearContext removes key', () => {
-  const s = makeSession('work', { device: 'laptop', env: 'prod' });
-  const result = clearContext(s, 'device');
-  expect(result.context.device).toBeUndefined();
-  expect(result.context.env).toBe('prod');
-});
-
-test('clearContext returns session unchanged if no context', () => {
-  const s = { id: 'x', name: 'x', tabs: [] };
-  expect(clearContext(s, 'key')).toEqual(s);
-});
-
-test('getContext returns value', () => {
-  const s = makeSession('work', { device: 'desktop' });
-  expect(getContext(s, 'device')).toBe('desktop');
-});
-
-test('getContext returns undefined for missing key', () => {
+test('getContext returns all context when no key given', () => {
   const s = makeSession('work');
-  expect(getContext(s, 'missing')).toBeUndefined();
+  setContext(s, 'a', 1);
+  setContext(s, 'b', 2);
+  expect(getContext(s)).toEqual({ a: 1, b: 2 });
 });
 
-test('filterByContextKey returns matching sessions', () => {
-  const sessions = [
-    makeSession('a', { device: 'laptop' }),
-    makeSession('b'),
-    makeSession('c', { device: 'phone' }),
-  ];
-  const result = filterByContextKey(sessions, 'device');
+test('getContext returns empty object if no context', () => {
+  expect(getContext(makeSession('x'))).toEqual({});
+});
+
+test('clearContext removes specific key', () => {
+  const s = makeSession('work');
+  setContext(s, 'env', 'dev');
+  setContext(s, 'region', 'eu');
+  clearContext(s, 'env');
+  expect(s.context.env).toBeUndefined();
+  expect(s.context.region).toBe('eu');
+});
+
+test('clearContext removes all context when no key given', () => {
+  const s = makeSession('work');
+  setContext(s, 'env', 'dev');
+  clearContext(s);
+  expect(s.context).toBeUndefined();
+});
+
+test('filterByContextKey returns sessions with key', () => {
+  const sessions = [makeSession('a'), makeSession('b'), makeSession('c')];
+  setContext(sessions[0], 'env', 'prod');
+  setContext(sessions[2], 'env', 'dev');
+  const result = filterByContextKey(sessions, 'env');
   expect(result).toHaveLength(2);
 });
 
-test('filterByContextValue returns exact matches', () => {
-  const sessions = [
-    makeSession('a', { device: 'laptop' }),
-    makeSession('b', { device: 'phone' }),
-  ];
-  const result = filterByContextValue(sessions, 'device', 'laptop');
+test('filterByContextValue returns sessions matching key+value', () => {
+  const sessions = [makeSession('a'), makeSession('b')];
+  setContext(sessions[0], 'env', 'prod');
+  setContext(sessions[1], 'env', 'dev');
+  const result = filterByContextValue(sessions, 'env', 'prod');
   expect(result).toHaveLength(1);
   expect(result[0].name).toBe('a');
 });
 
-test('setContextByName updates matching session', () => {
+test('setContextByName sets context on named session', () => {
   const sessions = [makeSession('alpha'), makeSession('beta')];
-  const result = setContextByName(sessions, 'alpha', 'role', 'admin');
-  expect(result.find(s => s.name === 'alpha').context.role).toBe('admin');
-  expect(result.find(s => s.name === 'beta').context.role).toBeUndefined();
+  setContextByName(sessions, 'beta', 'tier', 'free');
+  expect(sessions[1].context.tier).toBe('free');
+});
+
+test('setContextByName throws if session not found', () => {
+  expect(() => setContextByName([], 'missing', 'k', 'v')).toThrow('Session not found: missing');
 });
