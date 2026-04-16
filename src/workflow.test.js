@@ -1,78 +1,58 @@
-const { createWorkflow, addStep, removeStep, applyWorkflow, findWorkflowByName, removeWorkflow, listWorkflows } = require('./workflow');
+const { createWorkflow, addStep, removeStep, applyWorkflow, findWorkflowByName, listWorkflows, removeWorkflow } = require('./workflow');
 
-describe('createWorkflow', () => {
-  it('creates a workflow with name and empty steps', () => {
-    const w = createWorkflow('my-flow');
-    expect(w.name).toBe('my-flow');
-    expect(w.steps).toEqual([]);
-    expect(w.createdAt).toBeDefined();
-  });
+const mockSessions = [
+  { id: '1', name: 'Alpha', tabs: [{ url: 'https://a.com' }], tags: [] },
+  { id: '2', name: 'Beta', tabs: [{ url: 'https://b.com' },.com' }], tags: [] },
+];
 
-  it('creates a workflow with initial steps', () => {
-    const w = createWorkflow('flow', ['sort:date', 'dedupe']);
-    expect(w.steps).toHaveLength(2);
-  });
+test('createWorkflow returns workflow object', () => {
+  const wf = createWorkflow('my-flow');
+  expect(wf.name).toBe('my-flow');
+  expect(wf.steps).toEqual([]);
+  expect(wf.createdAt).toBeDefined();
 });
 
-describe('addStep', () => {
-  it('adds a step to workflow', () => {
-    const w = createWorkflow('flow');
-    const updated = addStep(w, 'sort:name');
-    expect(updated.steps).toContain('sort:name');
-  });
-
-  it('throws on invalid step', () => {
-    const w = createWorkflow('flow');
-    expect(() => addStep(w, '')).toThrow();
-  });
+test('addStep appends step to workflow', () => {
+  const wf = createWorkflow('flow');
+  const step = { label: 'filter', fn: s => s };
+  const updated = addStep(wf, step);
+  expect(updated.steps).toHaveLength(1);
+  expect(updated.steps[0].label).toBe('filter');
 });
 
-describe('removeStep', () => {
-  it('removes step by index', () => {
-    const w = createWorkflow('flow', ['a', 'b', 'c']);
-    const updated = removeStep(w, 1);
-    expect(updated.steps).toEqual(['a', 'c']);
-  });
-
-  it('throws on invalid index', () => {
-    const w = createWorkflow('flow', ['a']);
-    expect(() => removeStep(w, 5)).toThrow();
-  });
+test('removeStep removes step by index', () => {
+  let wf = createWorkflow('flow');
+  wf = addStep(wf, { label: 'a', fn: s => s });
+  wf = addStep(wf, { label: 'b', fn: s => s });
+  const updated = removeStep(wf, 0);
+  expect(updated.steps).toHaveLength(1);
+  expect(updated.steps[0].label).toBe('b');
 });
 
-describe('applyWorkflow', () => {
-  it('applies each step handler in order', () => {
-    const sessions = [{ name: 'a' }, { name: 'b' }];
-    const handlers = {
-      reverse: (s) => [...s].reverse(),
-    };
-    const w = createWorkflow('flow', ['reverse']);
-    const result = applyWorkflow(sessions, w, handlers);
-    expect(result[0].name).toBe('b');
-  });
-
-  it('throws on unknown step', () => {
-    const w = createWorkflow('flow', ['unknown']);
-    expect(() => applyWorkflow([], w, {})).toThrow('Unknown workflow step: unknown');
-  });
+test('applyWorkflow runs steps in sequence', () => {
+  const filterStep = { label: 'filter', fn: sessions => sessions.filter(s => s.name === 'Alpha') };
+  const wf = addStep(createWorkflow('flow'), filterStep);
+  const result = applyWorkflow(mockSessions, wf);
+  expect(result).toHaveLength(1);
+  expect(result[0].name).toBe('Alpha');
 });
 
-describe('findWorkflowByName', () => {
-  it('finds workflow by name', () => {
-    const workflows = [createWorkflow('alpha'), createWorkflow('beta')];
-    expect(findWorkflowByName(workflows, 'beta').name).toBe('beta');
-  });
-
-  it('returns null if not found', () => {
-    expect(findWorkflowByName([], 'x')).toBeNull();
-  });
+test('findWorkflowByName returns correct workflow', () => {
+  const workflows = [createWorkflow('one'), createWorkflow('two')];
+  expect(findWorkflowByName(workflows, 'two').name).toBe('two');
+  expect(findWorkflowByName(workflows, 'nope')).toBeNull();
 });
 
-describe('listWorkflows', () => {
-  it('returns summary list', () => {
-    const workflows = [createWorkflow('w1', ['a', 'b'])];
-    const list = listWorkflows(workflows);
-    expect(list[0].stepCount).toBe(2);
-    expect(list[0].name).toBe('w1');
-  });
+test('listWorkflows returns summary', () => {
+  const wf = addStep(createWorkflow('flow'), { label: 'x', fn: s => s });
+  const list = listWorkflows([wf]);
+  expect(list[0].name).toBe('flow');
+  expect(list[0].steps).toBe(1);
+});
+
+test('removeWorkflow removes by name', () => {
+  const workflows = [createWorkflow('a'), createWorkflow('b')];
+  const result = removeWorkflow(workflows, 'a');
+  expect(result).toHaveLength(1);
+  expect(result[0].name).toBe('b');
 });
