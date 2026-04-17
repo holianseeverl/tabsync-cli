@@ -1,74 +1,58 @@
-const { isValidMood, setMood, clearMood, setMoodByName, getMood, filterByMood, listMoods } = require('./mood');
+const { isValidMood, setMood, clearMood, setMoodByName, getMood, filterByMood, sortByMood } = require('./mood');
 
-const makeSession = (id, name, mood) => ({ id, name, tabs: [], createdAt: new Date().toISOString(), ...(mood ? { mood } : {}) });
+function makeSession(name, mood) {
+  const s = { id: name, name, tabs: [] };
+  if (mood) s.mood = mood;
+  return s;
+}
 
-describe('isValidMood', () => {
-  it('returns true for valid moods', () => {
-    expect(isValidMood('focused')).toBe(true);
-    expect(isValidMood('urgent')).toBe(true);
-  });
-  it('returns false for invalid moods', () => {
-    expect(isValidMood('happy')).toBe(false);
-    expect(isValidMood('')).toBe(false);
-  });
+test('isValidMood returns true for valid moods', () => {
+  expect(isValidMood('focused')).toBe(true);
+  expect(isValidMood('relaxed')).toBe(true);
 });
 
-describe('setMood', () => {
-  it('sets mood on matching session', () => {
-    const sessions = [makeSession('1', 'Work')];
-    const result = setMood(sessions, '1', 'focused');
-    expect(result[0].mood).toBe('focused');
-  });
-  it('throws on invalid mood', () => {
-    const sessions = [makeSession('1', 'Work')];
-    expect(() => setMood(sessions, '1', 'happy')).toThrow();
-  });
-  it('does not mutate other sessions', () => {
-    const sessions = [makeSession('1', 'A'), makeSession('2', 'B')];
-    const result = setMood(sessions, '1', 'relaxed');
-    expect(result[1].mood).toBeUndefined();
-  });
+test('isValidMood returns false for invalid mood', () => {
+  expect(isValidMood('happy')).toBe(false);
+  expect(isValidMood('')).toBe(false);
 });
 
-describe('clearMood', () => {
-  it('removes mood from session', () => {
-    const sessions = [makeSession('1', 'Work', 'urgent')];
-    const result = clearMood(sessions, '1');
-    expect(result[0].mood).toBeUndefined();
-  });
+test('setMood sets mood on session', () => {
+  const s = makeSession('a');
+  const result = setMood(s, 'focused');
+  expect(result.mood).toBe('focused');
 });
 
-describe('setMoodByName', () => {
-  it('sets mood by session name', () => {
-    const sessions = [makeSession('1', 'Research')];
-    const result = setMoodByName(sessions, 'Research', 'exploratory');
-    expect(result[0].mood).toBe('exploratory');
-  });
+test('setMood throws for invalid mood', () => {
+  expect(() => setMood(makeSession('a'), 'hyper')).toThrow();
 });
 
-describe('getMood', () => {
-  it('returns mood for session', () => {
-    const sessions = [makeSession('1', 'Work', 'focused')];
-    expect(getMood(sessions, '1')).toBe('focused');
-  });
-  it('returns null if no mood', () => {
-    const sessions = [makeSession('1', 'Work')];
-    expect(getMood(sessions, '1')).toBeNull();
-  });
+test('clearMood removes mood', () => {
+  const s = makeSession('a', 'relaxed');
+  const result = clearMood(s);
+  expect(result.mood).toBeUndefined();
 });
 
-describe('filterByMood', () => {
-  it('filters sessions by mood', () => {
-    const sessions = [makeSession('1', 'A', 'focused'), makeSession('2', 'B', 'relaxed'), makeSession('3', 'C', 'focused')];
-    const result = filterByMood(sessions, 'focused');
-    expect(result).toHaveLength(2);
-  });
+test('setMoodByName updates matching session', () => {
+  const sessions = [makeSession('a'), makeSession('b')];
+  const result = setMoodByName(sessions, 'a', 'urgent');
+  expect(result[0].mood).toBe('urgent');
+  expect(result[1].mood).toBeUndefined();
 });
 
-describe('listMoods', () => {
-  it('returns all valid moods', () => {
-    const moods = listMoods();
-    expect(moods).toContain('focused');
-    expect(moods.length).toBeGreaterThan(0);
-  });
+test('getMood returns mood or null', () => {
+  expect(getMood(makeSession('a', 'curious'))).toBe('curious');
+  expect(getMood(makeSession('b'))).toBeNull();
+});
+
+test('filterByMood returns matching sessions', () => {
+  const sessions = [makeSession('a', 'focused'), makeSession('b', 'relaxed'), makeSession('c', 'focused')];
+  expect(filterByMood(sessions, 'focused')).toHaveLength(2);
+});
+
+test('sortByMood sorts by mood order', () => {
+  const sessions = [makeSession('c', 'urgent'), makeSession('a', 'focused'), makeSession('b')];
+  const sorted = sortByMood(sessions);
+  expect(sorted[0].mood).toBe('focused');
+  expect(sorted[1].mood).toBe('urgent');
+  expect(sorted[2].mood).toBeUndefined();
 });
