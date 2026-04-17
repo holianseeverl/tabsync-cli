@@ -1,31 +1,26 @@
-// milestone.js — attach milestone markers to sessions
-
 const VALID_MILESTONES = ['draft', 'in-progress', 'review', 'done', 'archived'];
 
 function isValidMilestone(milestone) {
   return VALID_MILESTONES.includes(milestone);
 }
 
-function setMilestone(sessions, id, milestone) {
-  if (!isValidMilestone(milestone)) {
-    throw new Error(`Invalid milestone: "${milestone}". Must be one of: ${VALID_MILESTONES.join(', ')}`);
-  }
-  return sessions.map(s => s.id === id ? { ...s, milestone } : s);
+function setMilestone(session, milestone) {
+  if (!isValidMilestone(milestone)) throw new Error(`Invalid milestone: ${milestone}`);
+  return { ...session, milestone };
 }
 
-function clearMilestone(sessions, id) {
-  return sessions.map(s => s.id === id ? { ...s, milestone: undefined } : s);
+function clearMilestone(session) {
+  const s = { ...session };
+  delete s.milestone;
+  return s;
 }
 
 function setMilestoneByName(sessions, name, milestone) {
-  const session = sessions.find(s => s.name === name);
-  if (!session) throw new Error(`Session not found: "${name}"`);
-  return setMilestone(sessions, session.id, milestone);
+  return sessions.map(s => s.name === name ? setMilestone(s, milestone) : s);
 }
 
-function getMilestone(sessions, id) {
-  const session = sessions.find(s => s.id === id);
-  return session ? session.milestone || null : null;
+function getMilestone(session) {
+  return session.milestone || null;
 }
 
 function filterByMilestone(sessions, milestone) {
@@ -40,13 +35,8 @@ function sortByMilestone(sessions) {
   });
 }
 
-module.exports = {
-  isValidMilestone,
-  setMilestone,
-  clearMilestone,
-  setMilestoneByName,
-  getMilestone,
-  filterByMilestone,
-  sortByMilestone,
-  VALID_MILESTONES,
-};
+function listMilestones() {
+  return [...VALID_MILESTONES];
+}
+
+module.exports = { isValidMilestone, setMilestone, clearMilestone, setMilestoneByName, getMilestone, filterByMilestone, sortByMilestone, listMilestones };
