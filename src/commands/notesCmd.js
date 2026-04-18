@@ -46,6 +46,10 @@ async function handleGetNote(name, options = {}) {
 }
 
 async function handleFilterByNote(keyword, options = {}) {
+  if (!keyword || keyword.trim() === '') {
+    console.error('A keyword is required to filter by note.');
+    process.exit(1);
+  }
   const sessions = await loadSessions(options.file);
   const results = filterByNote(sessions, keyword);
   if (results.length === 0) {
