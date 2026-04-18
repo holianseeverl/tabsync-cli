@@ -1,72 +1,73 @@
-const {
-  isValidEnergy,
-  setEnergy,
-  clearEnergy,
-  setEnergyByName,
-  getEnergy,
-  filterByEnergy,
-  filterByMinEnergy,
-  sortByEnergy,
-} = require('./energy');
+const { isValidEnergy, setEnergy, clearEnergy, setEnergyByName, getEnergy, filterByEnergy, sortByEnergy } = require('./energy');
 
-function makeSession(name, energy) {
-  const s = { id: name, name, tabs: [] };
-  if (energy !== undefined) s.energy = energy;
-  return s;
+function makeSession(overrides = {}) {
+  return { id: 's1', name: 'Test', tabs: [], createdAt: new Date().toISOString(), ...overrides };
 }
 
-test('isValidEnergy accepts 1-5', () => {
-  [1, 2, 3, 4, 5].forEach(l => expect(isValidEnergy(l)).toBe(true));
+describe('isValidEnergy', () => {
+  test('accepts valid levels', () => {
+    ['low', 'medium', 'high'].forEach(e => expect(isValidEnergy(e)).toBe(true));
+  });
+  test('rejects invalid', () => {
+    expect(isValidEnergy('extreme')).toBe(false);
+    expect(isValidEnergy('')).toBe(false);
+  });
 });
 
-test('isValidEnergy rejects 0 and 6', () => {
-  expect(isValidEnergy(0)).toBe(false);
-  expect(isValidEnergy(6)).toBe(false);
+describe('setEnergy', () => {
+  test('sets energy on session', () => {
+    const s = makeSession();
+    const result = setEnergy(s, 'high');
+    expect(result.energy).toBe('high');
+  });
+  test('throws on invalid energy', () => {
+    expect(() => setEnergy(makeSession(), 'extreme')).toThrow();
+  });
 });
 
-test('setEnergy sets level', () => {
-  const s = makeSession('a');
-  expect(setEnergy(s, 3).energy).toBe(3);
+describe('clearEnergy', () => {
+  test('removes energy field', () => {
+    const s = makeSession({ energy: 'high' });
+    const result = clearEnergy(s);
+    expect(result.energy).toBeUndefined();
+  });
 });
 
-test('setEnergy throws on invalid level', () => {
-  expect(() => setEnergy(makeSession('a'), 7)).toThrow();
+describe('setEnergyByName', () => {
+  test('sets energy on matching session', () => {
+    const sessions = [makeSession({ name: 'Work' }), makeSession({ id: 's2', name: 'Play' })];
+    const result = setEnergyByName(sessions, 'Work', 'medium');
+    expect(result.find(s => s.name === 'Work').energy).toBe('medium');
+    expect(result.find(s => s.name === 'Play').energy).toBeUndefined();
+  });
 });
 
-test('clearEnergy removes energy', () => {
-  const s = makeSession('a', 4);
-  expect(clearEnergy(s).energy).toBeUndefined();
+describe('getEnergy', () => {
+  test('returns energy or null', () => {
+    expect(getEnergy(makeSession({ energy: 'low' }))).toBe('low');
+    expect(getEnergy(makeSession())).toBeNull();
+  });
 });
 
-test('setEnergyByName updates matching session', () => {
-  const sessions = [makeSession('a', 1), makeSession('b', 2)];
-  const result = setEnergyByName(sessions, 'a', 5);
-  expect(result.find(s => s.name === 'a').energy).toBe(5);
-  expect(result.find(s => s.name === 'b').energy).toBe(2);
+describe('filterByEnergy', () => {
+  test('filters sessions by energy level', () => {
+    const sessions = [
+      makeSession({ energy: 'high' }),
+      makeSession({ id: 's2', energy: 'low' }),
+      makeSession({ id: 's3', energy: 'high' })
+    ];
+    expect(filterByEnergy(sessions, 'high')).toHaveLength(2);
+  });
 });
 
-test('getEnergy returns null if not set', () => {
-  expect(getEnergy(makeSession('a'))).toBeNull();
-});
-
-test('filterByEnergy returns matching sessions', () => {
-  const sessions = [makeSession('a', 3), makeSession('b', 5), makeSession('c', 3)];
-  expect(filterByEnergy(sessions, 3).map(s => s.name)).toEqual(['a', 'c']);
-});
-
-test('filterByMinEnergy returns sessions at or above min', () => {
-  const sessions = [makeSession('a', 2), makeSession('b', 4), makeSession('c', 5)];
-  expect(filterByMinEnergy(sessions, 4).map(s => s.name)).toEqual(['b', 'c']);
-});
-
-test('sortByEnergy desc by default', () => {
-  const sessions = [makeSession('a', 1), makeSession('b', 5), makeSession('c', 3)];
-  const sorted = sortByEnergy(sessions);
-  expect(sorted.map(s => s.energy)).toEqual([5, 3, 1]);
-});
-
-test('sortByEnergy asc', () => {
-  const sessions = [makeSession('a', 4), makeSession('b', 1), makeSession('c', 2)];
-  const sorted = sortByEnergy(sessions, 'asc');
-  expect(sorted.map(s => s.energy)).toEqual([1, 2, 4]);
+describe('sortByEnergy', () => {
+  test('sorts by energy order low < medium < high', () => {
+    const sessions = [
+      makeSession({ id: 'a', energy: 'high' }),
+      makeSession({ id: 'b', energy: 'low' }),
+      makeSession({ id: 'c', energy: 'medium' })
+    ];
+    const sorted = sortByEnergy(sessions);
+    expect(sorted.map(s => s.energy)).toEqual(['low', 'medium', 'high']);
+  });
 });
