@@ -35,6 +35,17 @@ function sortByConfidence(sessions, order = 'desc') {
   });
 }
 
+/**
+ * Returns the average confidence across sessions that have a confidence value set.
+ * Returns null if no sessions have confidence set.
+ */
+function averageConfidence(sessions) {
+  const withConfidence = sessions.filter(s => typeof s.confidence === 'number');
+  if (withConfidence.length === 0) return null;
+  const sum = withConfidence.reduce((acc, s) => acc + s.confidence, 0);
+  return sum / withConfidence.length;
+}
+
 module.exports = {
   isValidConfidence,
   setConfidence,
@@ -43,4 +54,5 @@ module.exports = {
   getConfidence,
   filterByMinConfidence,
   sortByConfidence,
+  averageConfidence,
 };
