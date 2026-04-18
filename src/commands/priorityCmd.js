@@ -34,6 +34,10 @@ function handleClearPriority(name, options = {}) {
     console.error(`Session not found: ${name}`);
     process.exit(1);
   }
+  if (!getSessionPriority(target)) {
+    console.log(`"${name}" has no priority set, nothing to clear`);
+    return;
+  }
   const updated = clearPriority(sessions, target.id);
   saveSessions(updated, options.file);
   console.log(`Cleared priority for "${name}"`);
