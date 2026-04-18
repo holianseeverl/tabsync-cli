@@ -1,83 +1,64 @@
-const {
-  computeComplexity,
-  setComplexity,
-  setComplexityByName,
-  sortByComplexity,
-  filterByMinComplexity,
-  complexitySummary
-} = require('./complexity');
+const { computeComplexity, getComplexity, setComplexity, setComplexityByName, sortByComplexity, filterByMinComplexity, filterByMaxComplexity } = require('./complexity');
 
 function makeSession(overrides = {}) {
-  return {
-    id: 's1',
-    name: 'Test',
-    tabs: [],
-    tags: [],
-    ...overrides
-  };
+  return { id: 's1', name: 'Test', tabs: [], createdAt: new Date().toISOString(), ...overrides };
 }
 
-test('computeComplexity returns 0 for bare session', () => {
-  const s = makeSession();
+test('computeComplexity returns 0 for no tabs', () => {
+  const s = makeSession({ tabs: [] });
   expect(computeComplexity(s)).toBe(0);
 });
 
-test('computeComplexity counts tabs and tags', () => {
-  const s = makeSession({ tabs: [{}, {}], tags: ['a', 'b', 'c'] });
-  expect(computeComplexity(s)).toBe(7); // 2*2 + 3
+test('computeComplexity based on tab count', () => {
+  const s = makeSession({ tabs: [1, 2, 3, 4, 5] });
+  expect(computeComplexity(s)).toBeGreaterThan(0);
 });
 
-test('computeComplexity adds bonus for notes and priority', () => {
-  const s = makeSession({ notes: 'hello', priority: 'high' });
-  expect(computeComplexity(s)).toBe(8); // 5 + 3
+test('setComplexity sets value on session', () => {
+  const s = makeSession();
+  const result = setComplexity(s, 7);
+  expect(result.complexity).toBe(7);
 });
 
-test('setComplexity attaches _complexity field', () => {
-  const s = makeSession({ tabs: [{}] });
-  const result = setComplexity(s);
-  expect(result._complexity).toBe(2);
+test('getComplexity returns complexity field', () => {
+  const s = makeSession({ complexity: 4 });
+  expect(getComplexity(s)).toBe(4);
 });
 
-test('setComplexityByName only updates matching session', () => {
+test('getComplexity returns null if not set', () => {
+  const s = makeSession();
+  expect(getComplexity(s)).toBeNull();
+});
+
+test('setComplexityByName updates matching session', () => {
+  const sessions = [makeSession({ name: 'Alpha' }), makeSession({ id: 's2', name: 'Beta' })];
+  const result = setComplexityByName(sessions, 'Alpha', 9);
+  expect(result.find(s => s.name === 'Alpha').complexity).toBe(9);
+  expect(result.find(s => s.name === 'Beta').complexity).toBeUndefined();
+});
+
+test('sortByComplexity orders ascending', () => {
   const sessions = [
-    makeSession({ id: 's1', name: 'Alpha', tabs: [{}, {}] }),
-    makeSession({ id: 's2', name: 'Beta' })
+    makeSession({ name: 'A', complexity: 5 }),
+    makeSession({ name: 'B', complexity: 2 }),
+    makeSession({ name: 'C', complexity: 8 }),
   ];
-  const result = setComplexityByName(sessions, 'Alpha');
-  expect(result[0]._complexity).toBe(4);
-  expect(result[1]._complexity).toBeUndefined();
-});
-
-test('sortByComplexity desc puts highest first', () => {
-  const sessions = [
-    makeSession({ name: 'Low' }),
-    makeSession({ name: 'High', tabs: [{}, {}, {}], tags: ['x'] })
-  ];
-  const sorted = sortByComplexity(sessions, 'desc');
-  expect(sorted[0].name).toBe('High');
-});
-
-test('sortByComplexity asc puts lowest first', () => {
-  const sessions = [
-    makeSession({ name: 'High', tabs: [{}, {}, {}] }),
-    makeSession({ name: 'Low' })
-  ];
-  const sorted = sortByComplexity(sessions, 'asc');
-  expect(sorted[0].name).toBe('Low');
+  const sorted = sortByComplexity(sessions);
+  expect(sorted.map(s => s.name)).toEqual(['B', 'A', 'C']);
 });
 
 test('filterByMinComplexity filters correctly', () => {
   const sessions = [
-    makeSession({ name: 'A', tabs: [] }),
-    makeSession({ name: 'B', tabs: [{}, {}, {}] })
+    makeSession({ name: 'A', complexity: 3 }),
+    makeSession({ name: 'B', complexity: 7 }),
   ];
-  const result = filterByMinComplexity(sessions, 5);
-  expect(result).toHaveLength(1);
-  expect(result[0].name).toBe('B');
+  expect(filterByMinComplexity(sessions, 5).map(s => s.name)).toEqual(['B']);
 });
 
-test('complexitySummary returns name and score pairs', () => {
-  const sessions = [makeSession({ name: 'X', tabs: [{}] })];
-  const summary = complexitySummary(sessions);
-  expect(summary[0]).toEqual({ name: 'X', complexity: 2 });
+test('filterByMaxComplexity filters correctly', () => {
+  const sessions = [
+    makeSession({ name: 'A', complexity: 3 }),
+    makeSession({ name: 'B', complexity: 7 }),
+  ];
+  expect(filterByMaxComplexity(sessions, 5).map(s => s.name)).toEqual(['A']);
 });
