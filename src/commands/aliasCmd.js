@@ -16,6 +16,10 @@ function handleClearAlias(sessions, name) {
     console.log(`Session "${name}" not found.`);
     return sessions;
   }
+  if (!getAlias(session)) {
+    console.log(`Session "${name}" has no alias to clear.`);
+    return sessions;
+  }
   const updated = sessions.map(s => s.name === name ? clearAlias(s) : s);
   console.log(`Alias cleared for session "${name}".`);
   return updated;
