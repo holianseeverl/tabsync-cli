@@ -1,6 +1,6 @@
-// rhythm.js — track session work rhythm (daily activity pattern)
+// rhythm.js - manage session rhythm (daily, weekly, monthly, etc.)
 
-const VALID_RHYTHMS = ['morning', 'afternoon', 'evening', 'night', 'flexible'];
+const VALID_RHYTHMS = ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly'];
 
 function isValidRhythm(rhythm) {
   return VALID_RHYTHMS.includes(rhythm);
@@ -33,17 +33,12 @@ function sortByRhythm(sessions) {
   return [...sessions].sort((a, b) => {
     const ai = VALID_RHYTHMS.indexOf(a.rhythm || '');
     const bi = VALID_RHYTHMS.indexOf(b.rhythm || '');
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    return ai - bi;
   });
 }
 
-module.exports = {
-  isValidRhythm,
-  setRhythm,
-  clearRhythm,
-  setRhythmByName,
-  getRhythm,
-  filterByRhythm,
-  sortByRhythm,
-  VALID_RHYTHMS,
-};
+function listRhythms() {
+  return [...VALID_RHYTHMS];
+}
+
+module.exports = { isValidRhythm, setRhythm, clearRhythm, setRhythmByName, getRhythm, filterByRhythm, sortByRhythm, listRhythms };
