@@ -16,9 +16,12 @@ function formatSessionLine(session, index) {
   return `  ${index}. ${session.name} — ${tabCount} tab(s) — ${date}`;
 }
 
-async function handleSort(options = {}) {
-  const { by = 'date', order, save = false } = options;
-
+/**
+ * Validates sort options and exits with an error message if invalid.
+ * @param {string} by - The field to sort by.
+ * @param {string|undefined} order - The sort order.
+ */
+function validateSortOptions(by, order) {
   if (!VALID_SORT_FIELDS.includes(by)) {
     console.error(`Invalid sort field: "${by}". Choose from: ${VALID_SORT_FIELDS.join(', ')}`);
     process.exit(1);
@@ -28,6 +31,12 @@ async function handleSort(options = {}) {
     console.error(`Invalid order: "${order}". Choose from: asc, desc`);
     process.exit(1);
   }
+}
+
+async function handleSort(options = {}) {
+  const { by = 'date', order, save = false } = options;
+
+  validateSortOptions(by, order);
 
   const sessions = await loadSessions();
 
