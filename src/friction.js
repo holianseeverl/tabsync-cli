@@ -1,44 +1,44 @@
-// friction.js — track friction level for a session (1–5 scale)
+// friction.js - track friction level for sessions
 
-const VALID_FRICTION = [1, 2, 3, 4, 5];
+const VALID_FRICTION = ['none', 'low', 'medium', 'high', 'blocking'];
 
-function isValidFriction(value) {
-  return VALID_FRICTION.includes(value);
+function isValidFriction(level) {
+  return VALID_FRICTION.includes(level);
 }
 
-function setFriction(sessions, id, value) {
-  if (!isValidFriction(value)) throw new Error(`Invalid friction value: ${value}. Must be 1–5.`);
-  return sessions.map(s => s.id === id ? { ...s, friction: value } : s);
+function setFriction(session, level) {
+  if (!isValidFriction(level)) throw new Error(`Invalid friction level: ${level}`);
+  return { ...session, friction: level };
 }
 
-function clearFriction(sessions, id) {
-  return sessions.map(s => s.id === id ? { ...s, friction: undefined } : s);
+function clearFriction(session) {
+  const s = { ...session };
+  delete s.friction;
+  return s;
 }
 
-function setFrictionByName(sessions, name, value) {
-  const match = sessions.find(s => s.name === name);
-  if (!match) throw new Error(`Session not found: ${name}`);
-  return setFriction(sessions, match.id, value);
+function setFrictionByName(sessions, name, level) {
+  return sessions.map(s => s.name === name ? setFriction(s, level) : s);
 }
 
 function getFriction(session) {
-  return session.friction ?? null;
+  return session.friction || null;
 }
 
-function filterByFriction(sessions, value) {
-  return sessions.filter(s => s.friction === value);
+function filterByFriction(sessions, level) {
+  return sessions.filter(s => s.friction === level);
 }
 
-function filterByMinFriction(sessions, min) {
-  return sessions.filter(s => s.friction != null && s.friction >= min);
-}
-
-function sortByFriction(sessions, order = 'desc') {
+function sortByFriction(sessions) {
   return [...sessions].sort((a, b) => {
-    const fa = a.friction ?? 0;
-    const fb = b.friction ?? 0;
-    return order === 'asc' ? fa - fb : fb - fa;
+    const ai = VALID_FRICTION.indexOf(a.friction || 'none');
+    const bi = VALID_FRICTION.indexOf(b.friction || 'none');
+    return bi - ai;
   });
+}
+
+function listHighFriction(sessions) {
+  return sessions.filter(s => s.friction === 'high' || s.friction === 'blocking');
 }
 
 module.exports = {
@@ -48,6 +48,7 @@ module.exports = {
   setFrictionByName,
   getFriction,
   filterByFriction,
-  filterByMinFriction,
   sortByFriction,
+  listHighFriction,
+  VALID_FRICTION
 };

@@ -5,72 +5,71 @@ const {
   setFrictionByName,
   getFriction,
   filterByFriction,
-  filterByMinFriction,
   sortByFriction,
+  listHighFriction
 } = require('./friction');
 
-function makeSession(id, name, friction) {
-  return { id, name, friction };
+function makeSession(name, friction) {
+  const s = { id: name, name, tabs: [] };
+  if (friction) s.friction = friction;
+  return s;
 }
 
-test('isValidFriction accepts 1–5', () => {
-  expect(isValidFriction(1)).toBe(true);
-  expect(isValidFriction(5)).toBe(true);
-  expect(isValidFriction(0)).toBe(false);
-  expect(isValidFriction(6)).toBe(false);
+test('isValidFriction accepts valid levels', () => {
+  expect(isValidFriction('none')).toBe(true);
+  expect(isValidFriction('low')).toBe(true);
+  expect(isValidFriction('blocking')).toBe(true);
 });
 
-test('setFriction sets friction on matching session', () => {
-  const sessions = [makeSession('a', 'Alpha', null), makeSession('b', 'Beta', null)];
-  const result = setFriction(sessions, 'a', 3);
-  expect(result.find(s => s.id === 'a').friction).toBe(3);
-  expect(result.find(s => s.id === 'b').friction).toBeNull();
+test('isValidFriction rejects invalid levels', () => {
+  expect(isValidFriction('extreme')).toBe(false);
+  expect(isValidFriction('')).toBe(false);
 });
 
-test('setFriction throws on invalid value', () => {
-  const sessions = [makeSession('a', 'Alpha', null)];
-  expect(() => setFriction(sessions, 'a', 7)).toThrow('Invalid friction value');
+test('setFriction sets friction on session', () => {
+  const s = makeSession('s1');
+  const result = setFriction(s, 'medium');
+  expect(result.friction).toBe('medium');
+  expect(s.friction).toBeUndefined();
+});
+
+test('setFriction throws on invalid level', () => {
+  expect(() => setFriction(makeSession('s1'), 'extreme')).toThrow();
 });
 
 test('clearFriction removes friction', () => {
-  const sessions = [makeSession('a', 'Alpha', 4)];
-  const result = clearFriction(sessions, 'a');
-  expect(result[0].friction).toBeUndefined();
+  const s = makeSession('s1', 'high');
+  const result = clearFriction(s);
+  expect(result.friction).toBeUndefined();
 });
 
-test('setFrictionByName finds by name and sets', () => {
-  const sessions = [makeSession('a', 'Alpha', null)];
-  const result = setFrictionByName(sessions, 'Alpha', 2);
-  expect(result[0].friction).toBe(2);
+test('setFrictionByName updates matching session', () => {
+  const sessions = [makeSession('a', 'low'), makeSession('b', 'none')];
+  const result = setFrictionByName(sessions, 'a', 'high');
+  expect(result[0].friction).toBe('high');
+  expect(result[1].friction).toBe('none');
 });
 
-test('setFrictionByName throws if not found', () => {
-  expect(() => setFrictionByName([], 'Ghost', 1)).toThrow('Session not found');
-});
-
-test('getFriction returns value or null', () => {
-  expect(getFriction({ friction: 3 })).toBe(3);
-  expect(getFriction({})).toBeNull();
+test('getFriction returns friction or null', () => {
+  expect(getFriction(makeSession('s1', 'low'))).toBe('low');
+  expect(getFriction(makeSession('s1'))).toBeNull();
 });
 
 test('filterByFriction returns matching sessions', () => {
-  const sessions = [makeSession('a', 'A', 2), makeSession('b', 'B', 4), makeSession('c', 'C', 2)];
-  expect(filterByFriction(sessions, 2).map(s => s.id)).toEqual(['a', 'c']);
+  const sessions = [makeSession('a', 'low'), makeSession('b', 'high'), makeSession('c', 'low')];
+  expect(filterByFriction(sessions, 'low')).toHaveLength(2);
 });
 
-test('filterByMinFriction returns sessions at or above threshold', () => {
-  const sessions = [makeSession('a', 'A', 1), makeSession('b', 'B', 3), makeSession('c', 'C', 5)];
-  expect(filterByMinFriction(sessions, 3).map(s => s.id)).toEqual(['b', 'c']);
+test('sortByFriction orders by severity descending', () => {
+  const sessions = [makeSession('a', 'low'), makeSession('b', 'blocking'), makeSession('c', 'medium')];
+  const sorted = sortByFriction(sessions);
+  expect(sorted[0].friction).toBe('blocking');
+  expect(sorted[2].friction).toBe('low');
 });
 
-test('sortByFriction sorts descending by default', () => {
-  const sessions = [makeSession('a', 'A', 2), makeSession('b', 'B', 5), makeSession('c', 'C', 1)];
-  const result = sortByFriction(sessions);
-  expect(result.map(s => s.id)).toEqual(['b', 'a', 'c']);
-});
-
-test('sortByFriction sorts ascending', () => {
-  const sessions = [makeSession('a', 'A', 2), makeSession('b', 'B', 5), makeSession('c', 'C', 1)];
-  const result = sortByFriction(sessions, 'asc');
-  expect(result.map(s => s.id)).toEqual(['c', 'a', 'b']);
+test('listHighFriction returns high and blocking only', () => {
+  const sessions = [makeSession('a', 'low'), makeSession('b', 'blocking'), makeSession('c', 'high'), makeSession('d', 'none')];
+  const result = listHighFriction(sessions);
+  expect(result).toHaveLength(2);
+  expect(result.map(s => s.name)).toEqual(['b', 'c']);
 });
