@@ -26,6 +26,12 @@ test('setReminder does not affect other sessions', () => {
   expect(result[1].reminder.message).toBe('Check later');
 });
 
+test('setReminder overwrites existing reminder', () => {
+  let sessions = setReminder(makeSessions(), '1', { message: 'First' });
+  sessions = setReminder(sessions, '1', { message: 'Second' });
+  expect(sessions[0].reminder.message).toBe('Second');
+});
+
 test('clearReminder removes reminder from session', () => {
   let sessions = setReminder(makeSessions(), '1', { message: 'Do it' });
   sessions = clearReminder(sessions, '1');
@@ -44,6 +50,10 @@ test('getReminder returns reminder for session', () => {
 
 test('getReminder returns null if no reminder', () => {
   expect(getReminder(makeSessions(), '1')).toBeNull();
+});
+
+test('getReminder returns null for unknown session id', () => {
+  expect(getReminder(makeSessions(), 'nonexistent')).toBeNull();
 });
 
 test('listDue returns sessions with overdue reminders', () => {
