@@ -1,67 +1,75 @@
-const { isValidSignal, setSignal, clearSignal, setSignalByName, getSignal, filterBySignal, filterByMinSignal, sortBySignal } = require('./signal');
+const { isValidSignal, setSignal, clearSignal, setSignalByName, getSignal, filterBySignal, sortBySignal } = require('./signal');
 
 function makeSession(name, signal) {
   const s = { id: name, name, tabs: [] };
-  if (signal !== undefined) s.signal = signal;
+  if (signal) s.signal = signal;
   return s;
 }
 
-test('isValidSignal accepts 1-5', () => {
-  expect(isValidSignal(1)).toBe(true);
-  expect(isValidSignal(5)).toBe(true);
-  expect(isValidSignal(3)).toBe(true);
+describe('isValidSignal', () => {
+  test('accepts valid signals', () => {
+    expect(isValidSignal('low')).toBe(true);
+    expect(isValidSignal('critical')).toBe(true);
+  });
+  test('rejects invalid', () => {
+    expect(isValidSignal('urgent')).toBe(false);
+  });
 });
 
-test('isValidSignal rejects invalid values', () => {
-  expect(isValidSignal(0)).toBe(false);
-  expect(isValidSignal(6)).toBe(false);
-  expect(isValidSignal('high')).toBe(false);
+describe('setSignal', () => {
+  test('sets signal on session', () => {
+    const s = makeSession('a');
+    expect(setSignal(s, 'high').signal).toBe('high');
+  });
+  test('throws on invalid signal', () => {
+    expect(() => setSignal(makeSession('a'), 'unknown')).toThrow();
+  });
+  test('does not mutate original', () => {
+    const s = makeSession('a');
+    setSignal(s, 'low');
+    expect(s.signal).toBeUndefined();
+  });
 });
 
-test('setSignal sets signal on session', () => {
-  const s = makeSession('a');
-  expect(setSignal(s, 3).signal).toBe(3);
+describe('clearSignal', () => {
+  test('removes signal', () => {
+    const s = makeSession('a', 'medium');
+    expect(clearSignal(s).signal).toBeUndefined();
+  });
 });
 
-test('setSignal throws on invalid value', () => {
-  expect(() => setSignal(makeSession('a'), 9)).toThrow();
+describe('setSignalByName', () => {
+  test('updates matching session', () => {
+    const sessions = [makeSession('a'), makeSession('b')];
+    const result = setSignalByName(sessions, 'a', 'critical');
+    expect(result.find(s => s.name === 'a').signal).toBe('critical');
+    expect(result.find(s => s.name === 'b').signal).toBeUndefined();
+  });
 });
 
-test('clearSignal removes signal', () => {
-  const s = makeSession('a', 4);
-  expect(clearSignal(s).signal).toBeUndefined();
+describe('getSignal', () => {
+  test('returns signal or null', () => {
+    expect(getSignal(makeSession('a', 'low'))).toBe('low');
+    expect(getSignal(makeSession('b'))).toBeNull();
+  });
 });
 
-test('setSignalByName updates matching session', () => {
-  const sessions = [makeSession('a', 1), makeSession('b', 2)];
-  const result = setSignalByName(sessions, 'a', 5);
-  expect(result.find(s => s.name === 'a').signal).toBe(5);
-  expect(result.find(s => s.name === 'b').signal).toBe(2);
+describe('filterBySignal', () => {
+  test('filters correctly', () => {
+    const sessions = [makeSession('a', 'high'), makeSession('b', 'low'), makeSession('c', 'high')];
+    expect(filterBySignal(sessions, 'high').map(s => s.name)).toEqual(['a', 'c']);
+  });
 });
 
-test('getSignal returns signal or null', () => {
-  expect(getSignal(makeSession('a', 3))).toBe(3);
-  expect(getSignal(makeSession('b'))).toBeNull();
-});
-
-test('filterBySignal returns matching sessions', () => {
-  const sessions = [makeSession('a', 2), makeSession('b', 4), makeSession('c', 2)];
-  expect(filterBySignal(sessions, 2).map(s => s.name)).toEqual(['a', 'c']);
-});
-
-test('filterByMinSignal returns sessions at or above threshold', () => {
-  const sessions = [makeSession('a', 1), makeSession('b', 3), makeSession('c', 5)];
-  expect(filterByMinSignal(sessions, 3).map(s => s.name)).toEqual(['b', 'c']);
-});
-
-test('sortBySignal desc by default', () => {
-  const sessions = [makeSession('a', 2), makeSession('b', 5), makeSession('c', 1)];
-  const sorted = sortBySignal(sessions);
-  expect(sorted.map(s => s.signal)).toEqual([5, 2, 1]);
-});
-
-test('sortBySignal asc', () => {
-  const sessions = [makeSession('a', 2), makeSession('b', 5), makeSession('c', 1)];
-  const sorted = sortBySignal(sessions, 'asc');
-  expect(sorted.map(s => s.signal)).toEqual([1, 2, 5]);
+describe('sortBySignal', () => {
+  test('sorts critical first', () => {
+    const sessions = [makeSession('a', 'low'), makeSession('b', 'critical'), makeSession('c', 'medium')];
+    const sorted = sortBySignal(sessions);
+    expect(sorted[0].name).toBe('b');
+    expect(sorted[sorted.length - 1].name).toBe('a');
+  });
+  test('sessions without signal go last', () => {
+    const sessions = [makeSession('x'), makeSession('y', 'high')];
+    expect(sortBySignal(sessions)[0].name).toBe('y');
+  });
 });
