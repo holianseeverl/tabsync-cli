@@ -26,6 +26,10 @@ describe('isValidConfidence', () => {
     expect(isValidConfidence('high')).toBe(false);
     expect(isValidConfidence(null)).toBe(false);
   });
+
+  it('rejects NaN', () => {
+    expect(isValidConfidence(NaN)).toBe(false);
+  });
 });
 
 describe('setConfidence', () => {
@@ -38,11 +42,23 @@ describe('setConfidence', () => {
   it('throws on invalid value', () => {
     expect(() => setConfidence(makeSession(), 150)).toThrow();
   });
+
+  it('does not mutate the original session', () => {
+    const s = makeSession();
+    setConfidence(s, 75);
+    expect(s.confidence).toBeUndefined();
+  });
 });
 
 describe('clearConfidence', () => {
   it('removes confidence field', () => {
     const s = makeSession({ confidence: 80 });
+    const result = clearConfidence(s);
+    expect(result.confidence).toBeUndefined();
+  });
+
+  it('is a no-op if confidence was not set', () => {
+    const s = makeSession();
     const result = clearConfidence(s);
     expect(result.confidence).toBeUndefined();
   });
