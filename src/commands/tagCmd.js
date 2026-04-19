@@ -15,6 +15,11 @@ async function handleTagAdd(sessionId, tag, options = {}) {
 
   const normalizedTag = tag.trim().toLowerCase();
 
+  if (!normalizedTag) {
+    console.error('Tag cannot be empty.');
+    process.exit(1);
+  }
+
   if (sessions[index].tags && sessions[index].tags.includes(normalizedTag)) {
     console.log(`Tag "${normalizedTag}" is already present on session "${sessions[index].name}".`);
     return;
@@ -39,6 +44,11 @@ async function handleTagRemove(sessionId, tag, options = {}) {
   }
 
   const normalizedTag = tag.trim().toLowerCase();
+
+  if (!normalizedTag) {
+    console.error('Tag cannot be empty.');
+    process.exit(1);
+  }
 
   if (!sessions[index].tags || !sessions[index].tags.includes(normalizedTag)) {
     console.log(`Tag "${normalizedTag}" not found on session "${sessions[index].name}".`);
