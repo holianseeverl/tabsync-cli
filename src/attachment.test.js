@@ -29,6 +29,11 @@ test('removeAttachment removes by name', () => {
   expect(result.attachments[0].name).toBe('b');
 });
 
+test('removeAttachment throws if attachment not found', () => {
+  const s = makeSession({ attachments: [{ name: 'a', url: 'u1' }] });
+  expect(() => removeAttachment(s, 'nonexistent')).toThrow();
+});
+
 test('getAttachments returns empty array if none', () => {
   expect(getAttachments(makeSession())).toEqual([]);
 });
