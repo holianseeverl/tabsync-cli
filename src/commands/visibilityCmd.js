@@ -19,6 +19,11 @@ function handleUnhide(name, options = {}) {
     console.log(`No session found with name: ${name}`);
     return;
   }
+  const session = sessions[idx];
+  if (!session.hidden) {
+    console.log(`Session "${name}" is already visible.`);
+    return;
+  }
   const updated = sessions.map(s =>
     s.name === name ? unhideSession(s) : s
   );
