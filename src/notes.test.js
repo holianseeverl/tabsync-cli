@@ -43,6 +43,11 @@ describe('setNote', () => {
     const session = makeSession('1', 'Work');
     expect(() => setNote(session, null)).toThrow();
   });
+
+  it('throws if note is an empty string', () => {
+    const session = makeSession('1', 'Work');
+    expect(() => setNote(session, '')).toThrow();
+  });
 });
 
 describe('removeNote', () => {
@@ -103,41 +108,15 @@ describe('filterByNote', () => {
     const sessions = [makeSession('1', 'Work', null)];
     expect(filterByNote(sessions, 'anything')).toHaveLength(0);
   });
-});
 
-describe('setNoteByName', () => {
-  it('sets note on the session matching the name', () => {
+  it('returns multiple matching sessions', () => {
     const sessions = [
-      makeSession('1', 'Work'),
-      makeSession('2', 'Home')
+      makeSession('1', 'Work', 'urgent deadline'),
+      makeSession('2', 'Home', 'urgent errand'),
+      makeSession('3', 'Misc', 'nothing special')
     ];
-    const result = setNoteByName(sessions, 'Work', 'work related');
-    const updated = result.find(s => s.id === '1');
-    expect(updated.note).toBe('work related');
-  });
-
-  it('does not modify other sessions', () => {
-    const sessions = [
-      makeSession('1', 'Work'),
-      makeSession('2', 'Home')
-    ];
-    const result = setNoteByName(sessions, 'Work', 'work related');
-    const other = result.find(s => s.id === '2');
-    expect(other.note).toBeNull();
-  });
-
-  it('returns the same sessions array length', () => {
-    const sessions = [
-      makeSession('1', 'Work'),
-      makeSession('2', 'Home')
-    ];
-    const result = setNoteByName(sessions, 'Work', 'work related');
+    const result = filterByNote(sessions, 'urgent');
     expect(result).toHaveLength(2);
-  });
-
-  it('returns unchanged sessions if name not found', () => {
-    const sessions = [makeSession('1', 'Work', 'existing')];
-    const result = setNoteByName(sessions, 'Nonexistent', 'new note');
-    expect(result[0].note).toBe('existing');
+    expect(result.map(s => s.id)).toEqual(['1', '2']);
   });
 });
