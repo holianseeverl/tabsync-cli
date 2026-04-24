@@ -10,6 +10,10 @@ const {
 const { loadSessions, saveSessions } = require('../sessionStore');
 
 function handleSetStatus(name, status, options = {}) {
+  if (!isValidStatus(status)) {
+    console.error(`Invalid status "${status}". Valid options: ${VALID_STATUSES.join(', ')}`);
+    return;
+  }
   const sessions = loadSessions(options.file);
   const updated = setStatusByName(sessions, name, status);
   saveSessions(updated, options.file);
@@ -24,6 +28,10 @@ function handleClearStatus(id, options = {}) {
 }
 
 function handleFilterByStatus(status, options = {}) {
+  if (!isValidStatus(status)) {
+    console.error(`Invalid status "${status}". Valid options: ${VALID_STATUSES.join(', ')}`);
+    return;
+  }
   const sessions = loadSessions(options.file);
   const results = filterByStatus(sessions, status);
   if (results.length === 0) {
