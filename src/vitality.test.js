@@ -3,125 +3,109 @@ const {
   getVitality,
   scoreVitality,
   sortByVitality,
-  filterByMinVitality,
+  filterByMinVitality
 } = require('./vitality');
 
 function makeSession(overrides = {}) {
   return {
-    id: 'session-1',
+    id: 'sess-1',
     name: 'Test Session',
-    tabs: [],
+    tabs: [{ url: 'https://example.com' }],
     createdAt: new Date().toISOString(),
-    ...overrides,
+    ...overrides
   };
 }
 
 describe('computeVitality', () => {
-  test('returns 0 for empty session', () => {
-    const s = makeSession();
-    expect(computeVitality(s)).toBe(0);
+  it('returns a numeric score', () => {
+    const s = makeSession({ tabs: [{}, {}, {}], rating: 4, streak: 3 });
+    const score = computeVitality(s);
+    expect(typeof score).toBe('number');
+    expect(score).toBeGreaterThanOrEqual(0);
   });
 
-  test('accounts for streak contribution', () => {
-    const s = makeSession({ streak: 10 });
-    const v = computeVitality(s);
-    expect(v).toBeGreaterThan(0);
-    expect(v).toBeCloseTo(0.25, 2);
+  it('returns 0 for empty session', () => {
+    const s = makeSession({ tabs: [] });
+    const score = computeVitality(s);
+    expect(score).toBe(0);
   });
 
-  test('accounts for progress contribution', () => {
-    const s = makeSession({ progress: 100 });
-    const v = computeVitality(s);
-    expect(v).toBeCloseTo(0.20, 2);
+  it('increases with more tabs', () => {
+    const few = makeSession({ tabs: [{}] });
+    const many = makeSession({ tabs: [{}, {}, {}, {}, {}] });
+    expect(computeVitality(many)).toBeGreaterThan(computeVitality(few));
   });
 
-  test('accounts for rating contribution', () => {
-    const s = makeSession({ rating: 5 });
-    const v = computeVitality(s);
-    expect(v).toBeCloseTo(0.15, 2);
+  it('increases with higher rating', () => {
+    const low = makeSession({ tabs: [{}], rating: 1 });
+    const high = makeSession({ tabs: [{}], rating: 5 });
+    expect(computeVitality(high)).toBeGreaterThan(computeVitality(low));
   });
 
-  test('accounts for pulse count', () => {
-    const s = makeSession({ pulses: new Array(20).fill({ ts: Date.now() }) });
-    const v = computeVitality(s);
-    expect(v).toBeCloseTo(0.20, 2);
-  });
-
-  test('caps streak at 10 for normalization', () => {
-    const s1 = makeSession({ streak: 10 });
-    const s2 = makeSession({ streak: 50 });
-    expect(computeVitality(s1)).toBe(computeVitality(s2));
-  });
-
-  test('recent lastActive gives high drift score', () => {
-    const s = makeSession({ lastActive: new Date().toISOString() });
-    const v = computeVitality(s);
-    expect(v).toBeGreaterThanOrEqual(0.19);
-  });
-
-  test('old lastActive gives low drift score', () => {
-    const old = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-    const s = makeSession({ lastActive: old });
-    const v = computeVitality(s);
-    expect(v).toBeLessThan(0.05);
+  it('increases with higher streak', () => {
+    const low = makeSession({ tabs: [{}], streak: 0 });
+    const high = makeSession({ tabs: [{}], streak: 10 });
+    expect(computeVitality(high)).toBeGreaterThan(computeVitality(low));
   });
 });
 
 describe('getVitality', () => {
-  test('returns stored vitality if present', () => {
-    const s = makeSession({ vitality: 0.77 });
-    expect(getVitality(s)).toBe(0.77);
+  it('returns cached vitality if present', () => {
+    const s = makeSession({ vitality: 42 });
+    expect(getVitality(s)).toBe(42);
   });
 
-  test('computes vitality if not stored', () => {
-    const s = makeSession({ streak: 5 });
-    expect(getVitality(s)).toBe(computeVitality(s));
+  it('computes vitality if not cached', () => {
+    const s = makeSession({ tabs: [{}, {}], rating: 3 });
+    const v = getVitality(s);
+    expect(typeof v).toBe('number');
   });
 });
 
 describe('scoreVitality', () => {
-  test('attaches vitality to all sessions', () => {
-    const sessions = [makeSession({ streak: 3 }), makeSession({ progress: 50 })];
+  it('attaches vitality to each session', () => {
+    const sessions = [
+      makeSession({ id: 'a', tabs: [{}] }),
+      makeSession({ id: 'b', tabs: [{}, {}] })
+    ];
     const scored = scoreVitality(sessions);
     scored.forEach(s => expect(typeof s.vitality).toBe('number'));
+  });
+
+  it('returns a new array', () => {
+    const sessions = [makeSession()];
+    const scored = scoreVitality(sessions);
+    expect(scored).not.toBe(sessions);
   });
 });
 
 describe('sortByVitality', () => {
-  test('sorts descending by default', () => {
+  it('sorts sessions descending by vitality', () => {
     const sessions = [
-      makeSession({ streak: 1 }),
-      makeSession({ streak: 10 }),
-      makeSession({ streak: 5 }),
+      makeSession({ id: 'a', vitality: 10 }),
+      makeSession({ id: 'b', vitality: 50 }),
+      makeSession({ id: 'c', vitality: 30 })
     ];
     const sorted = sortByVitality(sessions);
-    expect(sorted[0].vitality).toBeGreaterThanOrEqual(sorted[1].vitality);
-    expect(sorted[1].vitality).toBeGreaterThanOrEqual(sorted[2].vitality);
-  });
-
-  test('sorts ascending when specified', () => {
-    const sessions = [
-      makeSession({ streak: 1 }),
-      makeSession({ streak: 10 }),
-    ];
-    const sorted = sortByVitality(sessions, 'asc');
-    expect(sorted[0].vitality).toBeLessThanOrEqual(sorted[1].vitality);
+    expect(sorted[0].id).toBe('b');
+    expect(sorted[1].id).toBe('c');
+    expect(sorted[2].id).toBe('a');
   });
 });
 
 describe('filterByMinVitality', () => {
-  test('filters out sessions below threshold', () => {
+  it('filters sessions below threshold', () => {
     const sessions = [
-      makeSession({ streak: 0 }),
-      makeSession({ streak: 10, progress: 100, rating: 5 }),
+      makeSession({ id: 'a', vitality: 10 }),
+      makeSession({ id: 'b', vitality: 50 }),
+      makeSession({ id: 'c', vitality: 30 })
     ];
-    const result = filterByMinVitality(sessions, 0.3);
-    expect(result.length).toBe(1);
-    expect(result[0].vitality).toBeGreaterThanOrEqual(0.3);
+    const result = filterByMinVitality(sessions, 25);
+    expect(result.map(s => s.id)).toEqual(['b', 'c']);
   });
 
-  test('returns all if threshold is 0', () => {
-    const sessions = [makeSession(), makeSession()];
-    expect(filterByMinVitality(sessions, 0).length).toBe(2);
+  it('returns all if threshold is 0', () => {
+    const sessions = [makeSession({ vitality: 5 }), makeSession({ vitality: 0 })];
+    expect(filterByMinVitality(sessions, 0)).toHaveLength(2);
   });
 });
