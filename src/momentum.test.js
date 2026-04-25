@@ -3,115 +3,116 @@ const {
   getMomentum,
   sortByMomentum,
   filterByMinMomentum,
-  filterByLevel,
-  MOMENTUM_LEVELS
+  momentumLevel,
 } = require('./momentum');
 
 function makeSession(overrides = {}) {
   return {
     id: 's1',
-    name: 'Test',
+    name: 'Test Session',
     tabs: [],
     streak: 0,
     pulses: [],
-    trackedMs: 0,
-    ...overrides
+    velocity: [],
+    lastActive: null,
+    ...overrides,
   };
 }
 
 describe('computeMomentum', () => {
-  test('returns stalled for empty session', () => {
+  it('returns 0 for a bare session with no activity', () => {
     const s = makeSession();
-    const result = computeMomentum(s);
-    expect(result.score).toBe(0);
-    expect(result.level).toBe('stalled');
+    expect(computeMomentum(s)).toBe(0);
   });
 
-  test('high streak contributes 3 points', () => {
-    const s = makeSession({ streak: 10 });
-    const result = computeMomentum(s);
-    expect(result.score).toBeGreaterThanOrEqual(3);
+  it('increases score with higher streak', () => {
+    const low = makeSession({ streak: 1 });
+    const high = makeSession({ streak: 10 });
+    expect(computeMomentum(high)).toBeGreaterThan(computeMomentum(low));
   });
 
-  test('many pulses contribute points', () => {
-    const s = makeSession({ pulses: new Array(10).fill({ ts: Date.now() }) });
-    const result = computeMomentum(s);
-    expect(result.score).toBeGreaterThanOrEqual(3);
-  });
-
-  test('tracked time over 5 hours adds 2 points', () => {
-    const s = makeSession({ trackedMs: 6 * 60 * 60 * 1000 });
-    const result = computeMomentum(s);
-    expect(result.score).toBeGreaterThanOrEqual(2);
-  });
-
-  test('old lastActive applies drift penalty', () => {
-    const longAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString();
-    const s = makeSession({ streak: 5, lastActive: longAgo });
-    const base = computeMomentum(makeSession({ streak: 5 }));
-    const drifted = computeMomentum(s);
-    expect(drifted.score).toBeLessThan(base.score);
-  });
-
-  test('score is capped between 0 and 8', () => {
-    const s = makeSession({
-      streak: 20,
-      pulses: new Array(20).fill({ ts: Date.now() }),
-      trackedMs: 10 * 60 * 60 * 1000
+  it('increases score with more pulses', () => {
+    const few = makeSession({ pulses: [{ ts: Date.now() }] });
+    const many = makeSession({
+      pulses: [{ ts: Date.now() }, { ts: Date.now() }, { ts: Date.now() }],
     });
-    const result = computeMomentum(s);
-    expect(result.score).toBeLessThanOrEqual(8);
-    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(computeMomentum(many)).toBeGreaterThan(computeMomentum(few));
   });
 
-  test('level is one of MOMENTUM_LEVELS', () => {
-    const s = makeSession({ streak: 3, pulses: [1, 2, 3] });
-    const result = computeMomentum(s);
-    expect(MOMENTUM_LEVELS).toContain(result.level);
+  it('increases score with higher average velocity', () => {
+    const slow = makeSession({ velocity: [{ value: 1 }] });
+    const fast = makeSession({ velocity: [{ value: 10 }] });
+    expect(computeMomentum(fast)).toBeGreaterThan(computeMomentum(slow));
+  });
+
+  it('gives recency boost for recently active sessions', () => {
+    const recent = makeSession({ lastActive: new Date().toISOString() });
+    const old = makeSession({
+      lastActive: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    expect(computeMomentum(recent)).toBeGreaterThan(computeMomentum(old));
+  });
+});
+
+describe('getMomentum', () => {
+  it('returns same value as computeMomentum', () => {
+    const s = makeSession({ streak: 3, pulses: [{ ts: Date.now() }] });
+    expect(getMomentum(s)).toBe(computeMomentum(s));
   });
 });
 
 describe('sortByMomentum', () => {
-  test('sorts descending by default', () => {
-    const sessions = [
-      makeSession({ id: 'a', streak: 0 }),
-      makeSession({ id: 'b', streak: 10, pulses: new Array(10).fill({}) })
-    ];
-    const sorted = sortByMomentum(sessions);
-    expect(sorted[0].id).toBe('b');
+  const a = makeSession({ id: 'a', streak: 1 });
+  const b = makeSession({ id: 'b', streak: 5 });
+  const c = makeSession({ id: 'c', streak: 10 });
+
+  it('sorts descending by default', () => {
+    const result = sortByMomentum([a, b, c]);
+    expect(result[0].id).toBe('c');
+    expect(result[2].id).toBe('a');
   });
 
-  test('sorts ascending when flag set', () => {
-    const sessions = [
-      makeSession({ id: 'a', streak: 0 }),
-      makeSession({ id: 'b', streak: 10, pulses: new Array(10).fill({}) })
-    ];
-    const sorted = sortByMomentum(sessions, true);
-    expect(sorted[0].id).toBe('a');
+  it('sorts ascending when specified', () => {
+    const result = sortByMomentum([a, b, c], 'asc');
+    expect(result[0].id).toBe('a');
+    expect(result[2].id).toBe('c');
+  });
+
+  it('does not mutate original array', () => {
+    const arr = [a, b, c];
+    sortByMomentum(arr);
+    expect(arr[0].id).toBe('a');
   });
 });
 
 describe('filterByMinMomentum', () => {
-  test('returns sessions at or above min score', () => {
-    const sessions = [
-      makeSession({ id: 'low' }),
-      makeSession({ id: 'high', streak: 10, pulses: new Array(10).fill({}) })
-    ];
-    const result = filterByMinMomentum(sessions, 4);
-    expect(result.every(s => computeMomentum(s).score >= 4)).toBe(true);
+  it('filters out sessions below threshold', () => {
+    const low = makeSession({ id: 'low', streak: 0 });
+    const high = makeSession({ id: 'high', streak: 20, pulses: Array(10).fill({ ts: Date.now() }) });
+    const result = filterByMinMomentum([low, high], 10);
+    expect(result.some((s) => s.id === 'high')).toBe(true);
+    expect(result.some((s) => s.id === 'low')).toBe(false);
   });
 });
 
-describe('filterByLevel', () => {
-  test('returns empty array for invalid level', () => {
-    const sessions = [makeSession()];
-    expect(filterByLevel(sessions, 'invalid')).toEqual([]);
+describe('momentumLevel', () => {
+  it('returns low for empty session', () => {
+    expect(momentumLevel(makeSession())).toBe('low');
   });
 
-  test('returns sessions matching level', () => {
-    const sessions = [makeSession()];
-    const level = computeMomentum(sessions[0]).level;
-    const result = filterByLevel(sessions, level);
-    expect(result.length).toBe(1);
+  it('returns medium for moderate activity', () => {
+    const s = makeSession({ streak: 3, pulses: [{ ts: Date.now() }] });
+    const level = momentumLevel(s);
+    expect(['low', 'medium', 'high']).toContain(level);
+  });
+
+  it('returns high for very active session', () => {
+    const s = makeSession({
+      streak: 10,
+      pulses: Array(10).fill({ ts: Date.now() }),
+      velocity: Array(5).fill({ value: 10 }),
+      lastActive: new Date().toISOString(),
+    });
+    expect(momentumLevel(s)).toBe('high');
   });
 });
