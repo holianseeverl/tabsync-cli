@@ -26,6 +26,11 @@ async function handleShare(sessionName, options = {}, filePath = 'sessions.json'
  * Handle: tabsync receive <code|url>
  */
 async function handleReceive(input, options = {}, filePath = 'sessions.json') {
+  if (!input || input.trim() === '') {
+    console.error('No input provided. Pass a share code or URL.');
+    return;
+  }
+
   let session;
   try {
     if (input.startsWith('http://') || input.startsWith('https://')) {
@@ -35,6 +40,11 @@ async function handleReceive(input, options = {}, filePath = 'sessions.json') {
     }
   } catch (err) {
     console.error(`Failed to decode: ${err.message}`);
+    return;
+  }
+
+  if (!session || !session.name) {
+    console.error('Decoded session is invalid or missing a name.');
     return;
   }
 
